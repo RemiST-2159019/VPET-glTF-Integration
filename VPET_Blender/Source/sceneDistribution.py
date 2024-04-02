@@ -108,6 +108,7 @@ def gatherSceneData():
         getMaterialsByteArray()
         getTexturesByteArray()
         getCharacterByteArray()
+        getCurveByteArray()
         
         # delete Scene Root object - scene will remain unchanged
         #bpy.ops.object.delete(use_global = False)
@@ -201,6 +202,7 @@ def processSceneObject(obj, index):
         processCharacter(obj, vpet.objectsToTransfer)
 
     elif obj.type == 'CURVE':
+        print("BING BING BING")
         processCurve(obj, vpet.objectsToTransfer)
         
     # gather general node data    
@@ -414,13 +416,17 @@ def processCharacter(armature_obj, object_list):
 
 def processCurve(obj, objList):
     curve_Pack = curvePackage()
+    curve_Pack.points = []
 
     for frame in range(bpy.context.scene.frame_start, bpy.context.scene.frame_end + 1):
         points = evaluate_curve(obj, frame)
         vpet.points_for_frames[frame] = points
 
+    print(points)
 
-    curve_Pack.points = list(vpet.points_for_frames.values())
+    for frame, points_list in vpet.points_for_frames.items():
+        for point in points_list:
+            curve_Pack.points.extend([point.x, point.y, point.z])
     curve_Pack.pointsLen = len(curve_Pack.points) # len is also equal to the nr of frames 
 
     vpet.curveList.append(curve_Pack)
@@ -862,7 +868,9 @@ def getCharacterByteArray():
 
            
 def getCurveByteArray():
-    for curve in vpet.curveListl:
+    for curve in vpet.curveList:
         curveBinary = bytearray([])
         curveBinary.extend(struct.pack('i', curve.pointsLen))
-        curveBinary.extend(struct.pack('%sf' % chr.sMSize*3, *curve.points))
+        curveBinary.extend(struct.pack('%sf' % curve.pointsLen, *curve.points))
+
+        vpet.curvesByteData.extend(curveBinary)
