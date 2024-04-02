@@ -136,6 +136,10 @@ def read_thread():
                 print("Materials request! Sending...")
                 if(vpet.materialsByteData != None):
                     vpet.socket_d.send(vpet.materialsByteData)
+            elif msg == "curve":
+                print("curve request! Sending...")
+                if(vpet.curvesByteData != None):
+                    vpet.socket_d.send(vpet.curvesByteData)
             else: # sent empty
                 vpet.socket_d.send_string("")
     return 0.1 # repeat every .1 second
@@ -172,7 +176,7 @@ def listener():
         if clientID != vpet.cID:
             msgtime = msg[1]
             type = vpet.messageType[msg[2]]
-            print(type)
+            #print(type)
   
             start = 3
 

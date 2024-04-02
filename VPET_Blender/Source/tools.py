@@ -206,9 +206,10 @@ def add_path():
         return
 
     vpetCollection = bpy.context.scene.vpet_properties.vpet_collection
+    vcol = bpy.data.collections.get(str(vpetCollection))
     vpet = bpy.context.window_manager.vpet_data
 
-    if armature in vpetCollection.children:
+    if armature.name in vcol.all_objects:
         # TODO test having selected actual objects
         sco = None
         # find the SceneCharacterObject associated with the selected armature
@@ -216,6 +217,7 @@ def add_path():
             if isinstance(obj, SceneCharacterObject) and obj.name == armature.name:
                 sco = obj
                 sco.path_to_follow = curve  # add curve/path property to SceneCharacterObj
+                print("FDSGFGFDHTHFDHDFGDGHGHDRFHGRHDF")
     else:
         print("The armature has to be initialised as a TRACER object and, therefore, be part of the VPET Collection")
         return

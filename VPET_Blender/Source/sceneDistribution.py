@@ -862,7 +862,7 @@ def getCharacterByteArray():
 
            
 def getCurveByteArray():
-    for curve in vpet.characterList:
+    for curve in vpet.curveListl:
         curveBinary = bytearray([])
         curveBinary.extend(struct.pack('i', curve.pointsLen))
         curveBinary.extend(struct.pack('%sf' % chr.sMSize*3, *curve.points))
