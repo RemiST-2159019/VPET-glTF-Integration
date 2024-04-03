@@ -202,7 +202,6 @@ def processSceneObject(obj, index):
         processCharacter(obj, vpet.objectsToTransfer)
 
     elif obj.type == 'CURVE':
-        print("BING BING BING")
         processCurve(obj, vpet.objectsToTransfer)
         
     # gather general node data    
@@ -422,11 +421,12 @@ def processCurve(obj, objList):
         points = evaluate_curve(obj, frame)
         vpet.points_for_frames[frame] = points
 
-    print(points)
+    
 
     for frame, points_list in vpet.points_for_frames.items():
         for point in points_list:
-            curve_Pack.points.extend([point.x, point.y, point.z])
+            curve_Pack.points.extend([point.x, point.z, point.y])
+    print(curve_Pack.points)
     curve_Pack.pointsLen = len(curve_Pack.points) # len is also equal to the nr of frames 
 
     vpet.curveList.append(curve_Pack)
