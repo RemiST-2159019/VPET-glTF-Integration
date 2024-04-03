@@ -417,7 +417,7 @@ def processCurve(obj, objList):
     curve_Pack = curvePackage()
     curve_Pack.points = []
 
-    for frame in range(bpy.context.scene.frame_start, bpy.context.scene.frame_end + 1):
+    for frame in range(0, bpy.context.scene.frame_end + 1):
         points = evaluate_curve(obj, frame)
         vpet.points_for_frames[frame] = points
 
@@ -426,7 +426,7 @@ def processCurve(obj, objList):
     for frame, points_list in vpet.points_for_frames.items():
         for point in points_list:
             curve_Pack.points.extend([point.x, point.z, point.y])
-    print(curve_Pack.points)
+            print(point.x)
     curve_Pack.pointsLen = len(curve_Pack.points) # len is also equal to the nr of frames 
 
     vpet.curveList.append(curve_Pack)
