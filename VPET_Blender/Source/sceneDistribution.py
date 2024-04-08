@@ -446,12 +446,18 @@ def evaluate_curve(curve_object, frame):
     
     return evaluated_points
 
+##  Function that takes a curve object in the scene and samples it, filling the TRACER Curve Package with the obtained data 
+#   IMPORTANT: The points sampled on the curve are added to the Curve Package in the format XZY (instead of XYZ) in order to
+#   convert between the blender Z-up coord. space and the more conventional Y-up space
+#   @param      obj     An object (of type \'CURVE\' in the scene)
+#   @returns    void    It appends a new Curve Package to the Curve List of the VPET environment (temporary solution)
 def processCurve_alt(obj, objList):
     curve_Pack = curvePackage()
     curve_Pack.points = []
 
     evaluated_bezier = evaluate_bezier_multi_seg(obj)
 
+    print("Size of evaluated_bezier " + str(len(evaluated_bezier)))
     for point in evaluated_bezier:
         curve_Pack.points.extend([point.x, point.z, point.y])
         print(point)
@@ -459,11 +465,11 @@ def processCurve_alt(obj, objList):
 
     vpet.curveList.append(curve_Pack)
 
-### Function that evaluates a bezier spline with multiple knots (control points) - only 2D curves supported
-### It selects the first spline element in a curve object, evaluates the various subsegments and returns the complete list of evaluated positions
-### The number of returned points is determined by the PATH DURATION value of the curve object
-### @param curve_object     A specific curve object in the scene
-### @returns                A list of points (of size equal to the path_duration of the curve) sampled along the spline contained in the curve
+##  Function that evaluates a bezier spline with multiple knots (control points) - only 2D curves supported
+#   It selects the first spline element in a curve object, evaluates the various subsegments and returns the complete list of evaluated positions
+#   The number of returned points is determined by the PATH DURATION value of the curve object
+#   @param  curve_object    A specific curve object in the scene
+#   @returns                A list of points (of size equal to the path_duration of the curve) sampled along the spline contained in the curve
 def evaluate_bezier_multi_seg(curve_object):
     bezier_points = curve_object.data.splines[0].bezier_points  # List of control points in the (first) bezier spline in the curve object - only one spline per curve supported at the moment
     is_cyclic = curve_object.data.splines[0].use_cyclic_u       # Whether the curve is a closed loop or not
@@ -487,9 +493,10 @@ def evaluate_bezier_multi_seg(curve_object):
         # Accumulating possible approximation error in the first segment's frames
         first_segment_frames = num_frames - (segment_frames * (num_segments - 1))
 
-        for segment in range (0, num_segments):
+        # Evaluate spline segments (excl. the cyclic part)
+        for segment in range (0, num_segments - 1):
             evaluated_segment = []
-
+            
             knot1 = bezier_points[segment].co
             handle1 = bezier_points[segment].handle_right
             knot2 = bezier_points[segment + 1].co
@@ -498,9 +505,22 @@ def evaluate_bezier_multi_seg(curve_object):
             if segment == 0:
                 evaluated_segment = mathutils.geometry.interpolate_bezier(knot1, handle1, handle2, knot2, first_segment_frames)
             else:
-                evaluated_segment = mathutils.geometry.interpolate_bezier(knot1, handle1, handle2, knot2, segment_frames)
+                evaluated_segment = mathutils.geometry.interpolate_bezier(knot1, handle1, handle2, knot2, segment_frames + 1) # Accounting for the removal of the first frame of every segment (it's redundant)
+                evaluated_segment.pop(0)
             
             evaluated_bezier.extend(evaluated_segment)
+        
+        # Evaluate cyclic segment (between last and first knot in the list)
+        evaluated_segment = []
+            
+        knot1 = bezier_points[-1].co
+        handle1 = bezier_points[-1].handle_right
+        knot2 = bezier_points[0].co
+        handle2 = bezier_points[0].handle_left
+
+        evaluated_segment = mathutils.geometry.interpolate_bezier(knot1, handle1, handle2, knot2, segment_frames)
+        evaluated_bezier.extend(evaluated_segment)
+
     else:
         num_segments = len(bezier_points) - 1   # Number of segments to be evaluated
         # Subdivide the total number of frames that have to be generated between the various bezier subsegments
@@ -508,6 +528,7 @@ def evaluate_bezier_multi_seg(curve_object):
         # Accumulating possible approximation error in the first segment's frames
         first_segment_frames = num_frames - (segment_frames * (num_segments - 1)) 
         
+        # Evaluate spline segments
         for segment in range (0, num_segments):
             evaluated_segment = []
 
@@ -519,7 +540,8 @@ def evaluate_bezier_multi_seg(curve_object):
             if segment == 0:
                 evaluated_segment = mathutils.geometry.interpolate_bezier(knot1, handle1, handle2, knot2, first_segment_frames)
             else:
-                evaluated_segment = mathutils.geometry.interpolate_bezier(knot1, handle1, handle2, knot2, segment_frames)
+                evaluated_segment = mathutils.geometry.interpolate_bezier(knot1, handle1, handle2, knot2, segment_frames + 1) # Accounting for the removal of the first frame of every segment (it's redundant)
+                evaluated_segment.pop(0)
             
             evaluated_bezier.extend(evaluated_segment)
     
