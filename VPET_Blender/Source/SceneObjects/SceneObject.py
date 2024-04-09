@@ -40,7 +40,7 @@ class SceneObject:
             self.editableObject.rotation_quaternion = new_value
             self.editableObject.rotation_mode = 'XYZ'
 
-            if self.editableObject.type == 'LIGHT' or self.editableObject.type == 'CAMERA':
+            if self.editableObject.type == 'LIGHT' or self.editableObject.type == 'CAMERA' or self.editableObject.type == 'ARMATURE':
                 self.editableObject.rotation_euler.rotate_axis("X", math.radians(90))
         else:
             SendParameterUpdate(parameter)
