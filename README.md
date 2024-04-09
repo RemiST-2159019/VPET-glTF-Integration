@@ -114,7 +114,7 @@ Follow the respective documentation:
 
 ![Animationsinstitut R&D](.doc/img/main/logo_rnd.jpg)
 
-VPET is a development by Filmakademie Baden-Wuerttemberg, Animationsinstitut R&D Labs in the scope of the EU funded Project Dreamspace (610005), the EU funded project  SAUCE (780470) and funds on the own behalf of Filmakademie Baden-Wuerttemberg.
+VPET is a development by Filmakademie Baden-Wuerttemberg, Animationsinstitut R&D Labs in the scope of the EU funded Projects MAX-R (101070072), SAUCE (780470), Dreamspace (610005) and funds on the own behalf of Filmakademie Baden-Wuerttemberg.
 
 
 
