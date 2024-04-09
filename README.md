@@ -116,7 +116,7 @@ Follow the respective documentation:
 
 VPET is a development by Filmakademie Baden-Wuerttemberg, Animationsinstitut R&D Labs in the scope of the EU funded Projects MAX-R (101070072), SAUCE (780470), Dreamspace (610005) and funds on the own behalf of Filmakademie Baden-Wuerttemberg.
 
-![Funded by EU](.doc/img/main/EN_FundedbytheEU_RGB_POS.png|width=100)
+![Funded by EU](.doc/img/main/EN_FundedbytheEU_RGB_POS.png | width=100)
 
 ## License
 VPET is a open-sorce development by Filmakademie Baden-Wuerttemberg's Animationsinstitut.  
