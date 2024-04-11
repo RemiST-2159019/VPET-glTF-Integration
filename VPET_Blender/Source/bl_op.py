@@ -34,7 +34,7 @@ Filmakademie (research<at>filmakademie.de).
 import bpy
 from .serverAdapter import set_up_thread, close_socket_d, close_socket_s, close_socket_c, close_socket_u
 from .tools import cleanUp, installZmq, checkZMQ, setupCollections, parent_to_root, add_path
-from .sceneDistribution import gatherSceneData
+from .sceneDistribution import gatherSceneData, resendCurve
 from .GenerateSkeletonObj import process_armature
 
 
@@ -149,7 +149,8 @@ class AddPathToCharacter(bpy.types.Operator):
 
     def execute(self, context):
         print('Add Path START')
-        add_path()
+        #add_path()
+        resendCurve()
         return {'FINISHED'}
        
 

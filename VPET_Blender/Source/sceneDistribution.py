@@ -89,6 +89,7 @@ def gatherSceneData():
     initialize()
      #cID
     vpet.cID = int(str(v_prop.server_ip).split('.')[3])
+    print( vpet.cID)
     objectList = getObjectList()
 
     if len(objectList) > 0:
@@ -414,6 +415,7 @@ def processCharacter(armature_obj, object_list):
     return chr_pack
 
 def processCurve(obj, objList):
+    vpet = bpy.context.window_manager.vpet_data
     curve_Pack = curvePackage()
     curve_Pack.points = []
 
@@ -452,6 +454,7 @@ def evaluate_curve(curve_object, frame):
 #   @param      obj     An object (of type \'CURVE\' in the scene)
 #   @returns    void    It appends a new Curve Package to the Curve List of the VPET environment (temporary solution)
 def processCurve_alt(obj, objList):
+    vpet = bpy.context.window_manager.vpet_data
     curve_Pack = curvePackage()
     curve_Pack.points = []
 
@@ -709,6 +712,7 @@ def get_vertex_bone_weights_and_indices(vert):
 def processGeoNew(mesh):
     geoPack = sceneMesh()
     mesh_identifier = generate_mesh_identifier(mesh)
+    geoPack.identifier = mesh_identifier
     vertex_bone_weights = {}
     vertex_bone_indices = {}
     isParentArmature = False
@@ -818,7 +822,7 @@ def processGeoNew(mesh):
     
     geoPack.indices = index_buffer
     geoPack.mesh = mesh
-    geoPack.identifier = mesh_identifier
+    
     
     vpet.geoList.append(geoPack)
     return (len(vpet.geoList)-1)
@@ -967,9 +971,22 @@ def getCharacterByteArray():
 
            
 def getCurveByteArray():
+    vpet = bpy.context.window_manager.vpet_data
     for curve in vpet.curveList:
         curveBinary = bytearray([])
         curveBinary.extend(struct.pack('i', curve.pointsLen))
         curveBinary.extend(struct.pack('%sf' % curve.pointsLen, *curve.points))
 
         vpet.curvesByteData.extend(curveBinary)
+
+def resendCurve():
+    vpet = bpy.context.window_manager.vpet_data
+    if bpy.context.selected_objects[0].type == 'CURVE' :
+        vpet.curvesByteData = bytearray([])
+        vpet.curveList = []
+        processCurve_alt(bpy.context.selected_objects[0], vpet.objectsToTransfer)
+        getCurveByteArray()
+
+        # TODO MAKE IT NICER AFTER FMX!!!!!
+
+    
