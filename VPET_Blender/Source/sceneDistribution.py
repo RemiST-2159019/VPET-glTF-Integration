@@ -473,7 +473,7 @@ def processCurve_alt(obj, objList):
         curve_Pack.tangents.extend([tangent.x, tangent.z, tangent.y]) #! TO BE TESTED!!!
         print(tangent)
 
-    curve_Pack.pointsLen = len(curve_Pack.points) # len is also equal to the nr of frames 
+    curve_Pack.pointsLen = len(curve_Pack.points) / 3 # len is also equal to the nr of frames 
 
     vpet.curveList.append(curve_Pack)
 
