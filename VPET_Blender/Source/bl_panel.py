@@ -56,7 +56,7 @@ class VPET_PT_Panel(bpy.types.Panel):
         row.operator('object.parent_to_root', text='Parent TO Root')
 
         row = layout.row()
-        row.operator('object.add_path', text='Assign Path to Character')
+        row.operator('object.add_path', text='Evaluate Bezier Curve')
 
         
         row = layout.row()

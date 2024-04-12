@@ -24,7 +24,7 @@ class SceneObject:
         self._parameterList.append(scale)
         # Bind UpdatePosition to the instance using functools.partial
         position.hasChanged.append(functools.partial(self.UpdatePosition, position))
-        rotation.hasChanged.append(functools.partial(self.Updaterotation, rotation))
+        rotation.hasChanged.append(functools.partial(self.UpdateRotation, rotation))
         scale.hasChanged.append(functools.partial(self.UpdateScale, scale))
 
 
@@ -34,7 +34,7 @@ class SceneObject:
         else:
             SendParameterUpdate(parameter)
 
-    def Updaterotation(self, parameter, new_value):
+    def UpdateRotation(self, parameter, new_value):
         if self._lock == True:
             self.editableObject.rotation_mode = 'QUATERNION'
             self.editableObject.rotation_quaternion = new_value

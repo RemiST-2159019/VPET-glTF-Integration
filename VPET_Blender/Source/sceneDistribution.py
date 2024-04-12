@@ -427,6 +427,7 @@ def processCurve(obj, objList):
         for point in points_list:
             curve_Pack.points.extend([point.x, point.z, point.y])
             print(point.x)
+
     curve_Pack.pointsLen = len(curve_Pack.points) # len is also equal to the nr of frames 
 
     vpet.curveList.append(curve_Pack)
@@ -457,13 +458,21 @@ def processCurve_alt(obj, objList):
     vpet = bpy.context.window_manager.vpet_data
     curve_Pack = curvePackage()
     curve_Pack.points = []
+    curve_Pack.tangents = []
 
-    evaluated_bezier = evaluate_bezier_multi_seg(obj)
+    evaluated_bezier, bezier_tangents = evaluate_bezier_multi_seg(obj)
 
     print("Size of evaluated_bezier " + str(len(evaluated_bezier)))
-    for point in evaluated_bezier:
+    for i in range(0,len(evaluated_bezier)):
+        
+        point = evaluated_bezier[i]
         curve_Pack.points.extend([point.x, point.z, point.y])
         print(point)
+
+        tangent = bezier_tangents[i]
+        curve_Pack.tangents.extend([tangent.x, tangent.z, tangent.y]) #! TO BE TESTED!!!
+        print(tangent)
+
     curve_Pack.pointsLen = len(curve_Pack.points) # len is also equal to the nr of frames 
 
     vpet.curveList.append(curve_Pack)
@@ -481,14 +490,16 @@ def evaluate_bezier_multi_seg(curve_object):
     #? curve_object.data.splines[0].sample_uniform_index_factors() # developer.blender.org/docs/features/objects/curve/
 
     if len(bezier_points) == 0:
-        return []
+        return [], []
 
     if len(bezier_points) == 1:
         knot = bezier_points[0]
         coord = knot.co.copy()
-        return [coord]
+        tang  = knot.handle_left.copy()
+        return [coord], tang
 
     evaluated_bezier = []
+    tangent_bezier = []
     if is_cyclic:
         num_segments = len(bezier_points)   # Number of segments to be evaluated (if the spline is cyclic the number of segments is equal to the number of points)
         # Subdivide the total number of frames that have to be generated between the various bezier subsegments
@@ -524,6 +535,15 @@ def evaluate_bezier_multi_seg(curve_object):
         evaluated_segment = mathutils.geometry.interpolate_bezier(knot1, handle1, handle2, knot2, segment_frames)
         evaluated_bezier.extend(evaluated_segment)
 
+        # Extract tangents at every evaluated point
+        tangent_bezier.append(bezier_points[0].handle_right.normalized()) # first tangent can be extracted from the first handle
+        for frame in range (1, num_frames - 1):
+            dir1 = evaluated_bezier[frame - 1] - evaluated_bezier[frame] # Direction from point-1 to point 
+            dir2 = evaluated_bezier[frame] - evaluated_bezier[frame + 1] # Direction from point to point+1
+            tang = dir1.normalize() + dir2.normalize() # Average direction 
+            tangent_bezier.append(tang.normalized())
+        tangent_bezier.append(bezier_points[0].handle_left.normalized()) # last tangent can be extracted from the last handle
+
     else:
         num_segments = len(bezier_points) - 1   # Number of segments to be evaluated
         # Subdivide the total number of frames that have to be generated between the various bezier subsegments
@@ -547,8 +567,17 @@ def evaluate_bezier_multi_seg(curve_object):
                 evaluated_segment.pop(0)
             
             evaluated_bezier.extend(evaluated_segment)
+
+        # Extract tangents at every evaluated point
+        tangent_bezier.append(bezier_points[0].handle_right.normalized()) # first tangent can be extracted from the first handle
+        for frame in range (1, num_frames - 1):
+            dir1 = evaluated_bezier[frame - 1] - evaluated_bezier[frame] # Direction from point-1 to point 
+            dir2 = evaluated_bezier[frame] - evaluated_bezier[frame + 1] # Direction from point to point+1
+            tang = dir1.normalized() + dir2.normalized() # Average direction 
+            tangent_bezier.append(tang.normalized())
+        tangent_bezier.append(bezier_points[-1].handle_left.normalized()) # last tangent can be extracted from the last handle
     
-    return evaluated_bezier
+    return evaluated_bezier, tangent_bezier
 
 def processEditableObjects(obj, index):
 
@@ -976,6 +1005,7 @@ def getCurveByteArray():
         curveBinary = bytearray([])
         curveBinary.extend(struct.pack('i', curve.pointsLen))
         curveBinary.extend(struct.pack('%sf' % curve.pointsLen, *curve.points))
+        curveBinary.extend(struct.pack('%sf' % curve.pointsLen, *curve.tangents))
 
         vpet.curvesByteData.extend(curveBinary)
 
