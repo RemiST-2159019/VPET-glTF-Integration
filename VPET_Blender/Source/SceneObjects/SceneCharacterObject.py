@@ -45,11 +45,19 @@ class SceneCharacterObject(SceneObject):
                 self.root_bone_name = bone.name
 
             bone_matrix_global = self.matrix_world @ bone.matrix
-            bone_rotation_quaternion = bone_matrix_global.to_quaternion()
+            bone_rotation_quaternion = bone_matrix_global.to_quaternion()    
             localBoneRotationParameter = Parameter(bone_rotation_quaternion, bone.name, self)
             self._parameterList.append(localBoneRotationParameter)
             localBoneRotationParameter.hasChanged.append(functools.partial(self.UpdateBoneRotation, localBoneRotationParameter))
             self.boneMap[localBoneRotationParameter._id] = bone_rotation_quaternion
+
+            bone_Position = bone.location
+            localBonePositionParameter = Parameter(bone_Position, bone.name, self)
+            self._parameterList.append(localBonePositionParameter)
+            localBonePositionParameter.hasChanged.append(functools.partial(self.UpdateBonePosition, localBonePositionParameter))
+            print(str(localBonePositionParameter._id) + "   " + str(localBonePositionParameter._name) + "   " + str(localBonePositionParameter._value))
+
+            
 
     def set_pose_matrices(self, current_pose_bone):
 
@@ -66,6 +74,7 @@ class SceneCharacterObject(SceneObject):
                 )
             else:
                 current_pose_bone.matrix_basis = current_pose_bone.bone.convert_local_to_pose(
+
                     matrix,
                     current_pose_bone.bone.matrix_local,
                     invert=True
@@ -91,8 +100,16 @@ class SceneCharacterObject(SceneObject):
         name = parameter._name
         self.received_rot[name] = new_value
         targetBone = self.armature_obj_pose_bones[name]
+        #targetBone.keyframe_insert(data_path="rotation_quaternion")
+        #bpy.context.scene.frame_set(bpy.context.scene.frame_current + 1)
+        
 
         self.compute_local_space_transformations(self.local_bone_rest_transform, targetBone, new_value)
         self.set_pose_matrices(targetBone)
+
+    def UpdateBonePosition(self, parameter, new_value):
+        name = parameter._name
+        targetBone = SceneCharacterObject.armature_obj_pose_bones[name]
+        targetBone.location = new_value
         
     
