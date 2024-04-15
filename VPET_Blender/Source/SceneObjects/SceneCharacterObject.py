@@ -51,6 +51,11 @@ class SceneCharacterObject(SceneObject):
             localBoneRotationParameter.hasChanged.append(functools.partial(self.UpdateBoneRotation, localBoneRotationParameter))
             self.boneMap[localBoneRotationParameter._id] = bone_rotation_quaternion
 
+        for bone in self.armature_obj_pose_bones:
+            # finding root bone for hierarchy traversal
+            if not bone.parent:
+                self.root_bone_name = bone.name
+
             bone_Position = bone.location
             localBonePositionParameter = Parameter(bone_Position, bone.name, self)
             self._parameterList.append(localBonePositionParameter)
