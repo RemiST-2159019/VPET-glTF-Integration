@@ -1,6 +1,6 @@
 import functools
 import math
-from mathutils import Matrix, Quaternion
+from mathutils import Matrix, Quaternion, Vector
 import bpy
 from ..AbstractParameter import Parameter
 from .SceneObject import SceneObject
@@ -10,8 +10,8 @@ class SceneCharacterObject(SceneObject):
 
     boneMap = {}
     local_bone_rest_transform = {}      # Stores the local resting bone space transformations in a dictionary
-    local_transform_map = {}            # Stores the values updated by TRACER local bone space transformations in a dictionary (may cause issues with values updated in a TRACER non-compliant way)
-    received_rot = {}
+    local_rotation_map = {}             # Stores the values updated by TRACER local bone space transformations in a dictionary (may cause issues with values updated in a TRACER non-compliant way)
+    local_translation_map = {}
     root_bone_name = None
     armature_obj_name = None
     armature_obj_pose_bones = None
@@ -66,14 +66,16 @@ class SceneCharacterObject(SceneObject):
 
     def set_pose_matrices(self, current_pose_bone):
 
-        if current_pose_bone.name in self.local_transform_map:
-            matrix = self.local_transform_map[current_pose_bone.name]
+        if current_pose_bone.name in self.local_rotation_map:
+            rotation_matrix = self.local_rotation_map[current_pose_bone.name]
+            translation_matrix = self.local_translation_map[current_pose_bone.name]
+            matrix = translation_matrix @ rotation_matrix
 
             if current_pose_bone.parent:
                 current_pose_bone.matrix_basis = current_pose_bone.bone.convert_local_to_pose(
                     matrix,
                     current_pose_bone.bone.matrix_local,
-                    parent_matrix= self.local_transform_map[current_pose_bone.parent.name],
+                    parent_matrix= self.local_rotation_map[current_pose_bone.parent.name],
                     parent_matrix_local=current_pose_bone.parent.bone.matrix_local,
                     invert=True
                 )
@@ -86,35 +88,48 @@ class SceneCharacterObject(SceneObject):
                 )
         
 
-    def compute_local_space_transformations(self, transforms, current_pose_bone, new_offset_quaternion):
+    def rotate_local_transform(self, transforms, current_pose_bone, new_quat):
         custom_matrix_map = {}
 
         t = transforms[current_pose_bone.name]
 
         if current_pose_bone.parent:
-            new_t = self.local_transform_map[current_pose_bone.parent.name] @ Matrix.Translation(t.to_translation()) @ new_offset_quaternion.to_matrix().to_4x4()
-            self.local_transform_map[current_pose_bone.name] = new_t
+            new_t = self.local_rotation_map[current_pose_bone.parent.name] @ Matrix.Translation(t.to_translation()) @ new_quat.to_matrix().to_4x4()
+            self.local_rotation_map[current_pose_bone.name] = new_t
         else:
-            new_t = Matrix.Translation(t.to_translation()) @ new_offset_quaternion.to_matrix().to_4x4()
-            self.local_transform_map[current_pose_bone.name] = new_t
+            new_t = Matrix.Translation(t.to_translation()) @ new_quat.to_matrix().to_4x4()
+            self.local_rotation_map[current_pose_bone.name] = new_t
 
         return custom_matrix_map
+    
+    # def translate_local_transform(self, transforms, current_pose_bone, new_pos):
+    #     custom_matrix_map = {}
+
+    #     if current_pose_bone.parent:
+    #         new_t = self.local_transform_map[current_pose_bone.parent.name] @ t @ Matrix.Translation(new_pos)
+    #         self.local_transform_map[current_pose_bone.name] = new_t
+    #     else:
+    #         new_t = Matrix.Translation(new_pos)
+    #         self.local_transform_map[current_pose_bone.name] = new_t
+
+    #     return custom_matrix_map
 
     def UpdateBoneRotation(self, parameter, new_value):
 
         name = parameter._name
-        self.received_rot[name] = new_value
         targetBone = self.armature_obj_pose_bones[name]
         #targetBone.keyframe_insert(data_path="rotation_quaternion")
         #bpy.context.scene.frame_set(bpy.context.scene.frame_current + 1)
-        
-
-        self.compute_local_space_transformations(self.local_bone_rest_transform, targetBone, new_value)
+        self.rotate_local_transform(self.local_bone_rest_transform, targetBone, new_value)
         self.set_pose_matrices(targetBone)
 
     def UpdateBonePosition(self, parameter, new_value):
         name = parameter._name
-        targetBone = SceneCharacterObject.armature_obj_pose_bones[name]
-        targetBone.location = new_value
-        
-    
+        targetBone = self.armature_obj_pose_bones[name]
+
+        self.local_translation_map[targetBone.name] = Matrix.Translation(Vector())
+
+        if targetBone.name == "hip":
+            print(targetBone.name + " Position =  " + str(targetBone.location) + " - New Value = " + str(new_value))
+            rest_t, rest_r, rest_s = self.local_bone_rest_transform[targetBone.name].decompose()
+            self.local_translation_map[targetBone.name] = Matrix.Translation(new_value.xzy - rest_t)
