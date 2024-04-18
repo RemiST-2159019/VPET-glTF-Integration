@@ -101,18 +101,6 @@ class SceneCharacterObject(SceneObject):
             self.local_rotation_map[current_pose_bone.name] = new_t
 
         return custom_matrix_map
-    
-    # def translate_local_transform(self, transforms, current_pose_bone, new_pos):
-    #     custom_matrix_map = {}
-
-    #     if current_pose_bone.parent:
-    #         new_t = self.local_transform_map[current_pose_bone.parent.name] @ t @ Matrix.Translation(new_pos)
-    #         self.local_transform_map[current_pose_bone.name] = new_t
-    #     else:
-    #         new_t = Matrix.Translation(new_pos)
-    #         self.local_transform_map[current_pose_bone.name] = new_t
-
-    #     return custom_matrix_map
 
     def UpdateBoneRotation(self, parameter, new_value):
 
@@ -130,6 +118,6 @@ class SceneCharacterObject(SceneObject):
         self.local_translation_map[targetBone.name] = Matrix.Translation(Vector())
 
         if targetBone.name == "hip":
-            print(targetBone.name + " Position =  " + str(targetBone.location) + " - New Value = " + str(new_value))
+            #print(targetBone.name + " Position =  " + str(targetBone.location) + " - New Value = " + str(new_value))
             rest_t, rest_r, rest_s = self.local_bone_rest_transform[targetBone.name].decompose()
             self.local_translation_map[targetBone.name] = Matrix.Translation(new_value.xzy - rest_t)
