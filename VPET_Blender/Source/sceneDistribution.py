@@ -466,11 +466,11 @@ def processCurve_alt(obj, objList):
     for i in range(0,len(evaluated_bezier)):
         
         point = evaluated_bezier[i]
-        curve_Pack.points.extend([point.x, point.z, point.y])
+        curve_Pack.points.extend([point.x, point.y, point.z])
         print(point)
 
         tangent = bezier_tangents[i]
-        curve_Pack.tangents.extend([tangent.x, tangent.z, tangent.y]) #! TO BE TESTED!!!
+        curve_Pack.tangents.extend([tangent.x, tangent.y, tangent.z]) #! TO BE TESTED!!!
         print(tangent)
 
     curve_Pack.pointsLen = int(len(curve_Pack.points) / 3) # len is also equal to the nr of frames 
@@ -538,8 +538,8 @@ def evaluate_bezier_multi_seg(curve_object):
         # Extract tangents at every evaluated point
         tangent_bezier.append(bezier_points[0].handle_right.normalized()) # first tangent can be extracted from the first handle
         for frame in range (1, num_frames - 1):
-            dir1 = evaluated_bezier[frame - 1] - evaluated_bezier[frame] # Direction from point-1 to point 
-            dir2 = evaluated_bezier[frame] - evaluated_bezier[frame + 1] # Direction from point to point+1
+            dir1 = evaluated_bezier[frame] - evaluated_bezier[frame -1] # Direction from point-1 to point 
+            dir2 = evaluated_bezier[frame + 1] - evaluated_bezier[frame] # Direction from point to point+1
             tang = dir1.normalize() + dir2.normalize() # Average direction 
             tangent_bezier.append(tang.normalized())
         tangent_bezier.append(bezier_points[0].handle_left.normalized()) # last tangent can be extracted from the last handle
@@ -571,8 +571,8 @@ def evaluate_bezier_multi_seg(curve_object):
         # Extract tangents at every evaluated point
         tangent_bezier.append(bezier_points[0].handle_right.normalized()) # first tangent can be extracted from the first handle
         for frame in range (1, num_frames - 1):
-            dir1 = evaluated_bezier[frame - 1] - evaluated_bezier[frame] # Direction from point-1 to point 
-            dir2 = evaluated_bezier[frame] - evaluated_bezier[frame + 1] # Direction from point to point+1
+            dir1 = evaluated_bezier[frame] - evaluated_bezier[frame -1] # Direction from point-1 to point 
+            dir2 = evaluated_bezier[frame+1] - evaluated_bezier[frame] # Direction from point to point+1
             tang = dir1.normalized() + dir2.normalized() # Average direction 
             tangent_bezier.append(tang.normalized())
         tangent_bezier.append(bezier_points[-1].handle_left.normalized()) # last tangent can be extracted from the last handle
