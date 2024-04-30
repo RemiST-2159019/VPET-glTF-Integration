@@ -217,7 +217,6 @@ def add_path():
             if isinstance(obj, SceneCharacterObject) and obj.name == armature.name:
                 sco = obj
                 sco.path_to_follow = curve  # add curve/path property to SceneCharacterObj
-                print("FDSGFGFDHTHFDHDFGDGHGHDRFHGRHDF")
     else:
         print("The armature has to be initialised as a TRACER object and, therefore, be part of the VPET Collection")
         return
