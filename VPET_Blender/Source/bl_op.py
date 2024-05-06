@@ -84,6 +84,7 @@ class StopDistribute(bpy.types.Operator):
     def execute(self, context):
         print('stop distribute')
         print('stop subscription')
+        self.report({'INFO'}, f'STOP SENDING Objects to VPET')
         reset()
         return {'FINISHED'}
 

@@ -110,9 +110,6 @@ def gatherSceneData():
         getTexturesByteArray()
         getCharacterByteArray()
         getCurveByteArray()
-        
-        # delete Scene Root object - scene will remain unchanged
-        #bpy.ops.object.delete(use_global = False)
 
         for i, v in enumerate(vpet.nodeList):
             if v.editable == 1:
@@ -579,10 +576,10 @@ def evaluate_bezier_multi_seg(curve_object):
     
     return evaluated_bezier, tangent_bezier
 
+##Create SceneObject for each object that will be sent iver network
+#
+#@param obj the acual object from the scene
 def processEditableObjects(obj, index):
-
-    #if obj.type == "ARMATURE":
-     #   processCharacter(obj, vpet.objectsToTransfer)
 
     if obj.type == 'MESH':
         aaa = SceneObject(obj)
@@ -598,7 +595,6 @@ def processEditableObjects(obj, index):
             aaa = SceneObjectLight(obj)
             vpet.SceneObjects.append(aaa)
     elif obj.type == 'ARMATURE':
-
         aaa = SceneCharacterObject(obj)
         vpet.SceneObjects.append(aaa)
 
