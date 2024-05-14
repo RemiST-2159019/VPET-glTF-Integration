@@ -73,4 +73,6 @@ class VPET_PT_Panel(bpy.types.Panel):
         row = layout.row()
         row.prop(bpy.context.scene.vpet_properties, 'mixamo_humanoid', text="Mixamo Humanoid?")
 
+        row = layout.row()
+        row.operator('object.rpc', text = "RPC CHANGE LATER")
         

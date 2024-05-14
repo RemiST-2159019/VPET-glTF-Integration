@@ -153,6 +153,17 @@ class AddPathToCharacter(bpy.types.Operator):
         #add_path()
         resendCurve()
         return {'FINISHED'}
+    
+class SendRpcCall(bpy.types.Operator):
+    #TODO mod name dunctionality and txt
+    bl_idname = "object.rpc"
+    bl_label = "sendRPC"
+    bl_description = 'send the call to generate and stream animation to animhost'
+    
+    def execute(self, context):
+        print('rpc bep bop bep bop')
+        #TODO add functionality 
+        return {'FINISHED'}
        
 
 def reset():
