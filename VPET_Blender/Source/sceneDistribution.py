@@ -758,7 +758,7 @@ def processGeoNew(mesh):
                 vertex_bone_weights[vert.index] = weights
                 vertex_bone_indices[vert.index] = indices
 
-    mesh.data.calc_normals_split()
+    #mesh.data.calc_normals_split()
     bm = bmesh.new()
     bm.from_mesh(mesh.data)
 
