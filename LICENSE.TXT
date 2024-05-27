@@ -14,9 +14,6 @@ In 2018 some featrures (Character Animation Interface and USD support) were
 addressed in the scope of the EU funded project  SAUCE (https://www.sauceproject.eu/) 
 under grant agreement no 780470, 2018-2020
 
-VPET consists of 3 core components: VPET Unity Client, Scene Distribution and
-Syncronisation Server. They are licensed under the following terms:
-
 -------------------------------------------------------------------------------
 
 VPET Unity Client
@@ -37,5 +34,5 @@ VPET Unity sourcecode AND binaries incorporate the following resources
 
 NetMQ  				- LGPLv3 (https://github.com/zeromq/netmq)
 AsyncIO 			- MPLv2.0 (https://github.com/somdoron/AsyncIO)
-NaCI 				- Public Domain (https://nacl.cr.yp.to/)
+NaCI 				  - Public Domain (https://nacl.cr.yp.to/)
 
