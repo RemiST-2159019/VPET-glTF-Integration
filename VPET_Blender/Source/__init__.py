@@ -51,7 +51,9 @@ from .bl_op import InstallZMQ
 from .bl_op import SetupCharacter
 from .bl_op import MakeEditable
 from .bl_op import ParentToRoot
-from .bl_op import AddPathToCharacter
+from .bl_op import AddPath
+from .bl_op import AddWaypoint
+from .bl_op import EvalCurve
 from .bl_op import SendRpcCall
 from .bl_panel import VPET_PT_Panel
 from .tools import initialize
@@ -61,7 +63,7 @@ from .updateTRS import RealTimeUpdaterOperator
 from .singleSelect import OBJECT_OT_single_select
 
 # imported classes to register
-classes = (DoDistribute, StopDistribute, SetupScene, VPET_PT_Panel, VpetProperties, InstallZMQ, RealTimeUpdaterOperator, OBJECT_OT_single_select, SetupCharacter, MakeEditable, ParentToRoot, AddPathToCharacter, SendRpcCall) 
+classes = (DoDistribute, StopDistribute, SetupScene, VPET_PT_Panel, VpetProperties, InstallZMQ, RealTimeUpdaterOperator, OBJECT_OT_single_select, SetupCharacter, MakeEditable, ParentToRoot, AddPath, AddWaypoint, EvalCurve, SendRpcCall) 
 
 ## Register classes and VpetSettings
 #

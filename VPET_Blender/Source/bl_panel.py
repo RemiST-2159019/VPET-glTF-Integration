@@ -56,8 +56,9 @@ class VPET_PT_Panel(bpy.types.Panel):
         row.operator('object.parent_to_root', text='Parent TO Root')
 
         row = layout.row()
-        row.operator('object.add_path', text='Evaluate Bezier Curve')
-
+        row.operator('object.add_path', text='Add Control Path')
+        row.operator('object.add_control_point', text='Add New Waypoint')
+        row.operator('object.eval_curve', text='Evaluate Curve')            #TODO: to be triggered when deselecting any of the Control Points
         
         row = layout.row()
         row.operator('object.zmq_distribute', text = "Do Distribute")
