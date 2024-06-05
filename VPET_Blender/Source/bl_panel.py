@@ -33,6 +33,8 @@ Filmakademie (research<at>filmakademie.de).
 
 import bpy
 
+from .bl_op import AddPath, AddWaypoint, EvalCurve
+
 ## Interface
 #  
 class VPET_PT_Panel(bpy.types.Panel):
@@ -56,8 +58,9 @@ class VPET_PT_Panel(bpy.types.Panel):
         row.operator('object.parent_to_root', text='Parent TO Root')
 
         row = layout.row()
-        row.operator('object.add_path', text='Evaluate Bezier Curve')
-
+        row.operator(AddPath.bl_idname, text='Add Control Path')
+        row.operator(AddWaypoint.bl_idname, text='Add New Waypoint')
+        row.operator(EvalCurve.bl_idname, text='Evaluate Curve')            #TODO: to be triggered when deselecting any of the Control Points
         
         row = layout.row()
         row.operator('object.zmq_distribute', text = "Do Distribute")
@@ -73,4 +76,17 @@ class VPET_PT_Panel(bpy.types.Panel):
         row = layout.row()
         row.prop(bpy.context.scene.vpet_properties, 'mixamo_humanoid', text="Mixamo Humanoid?")
 
-        
+        row = layout.row()
+        row.operator('object.rpc', text = "RPC CHANGE LATER")
+
+class AnimPathMenu(bpy.types.Menu):
+    bl_label = "Animation Path"	   
+    bl_idname = "OBJECT_MT_custom_spline_menu"
+
+    def draw(self, context):
+        self.layout.operator(AddPath.bl_idname,
+                             text="Animation Path",
+                             icon='OUTLINER_DATA_CURVE')
+        self.layout.operator(AddWaypoint.bl_idname,
+                             text="Path Control Point",
+                             icon='RESTRICT_SELECT_OFF') # alternative option EMPTY_SINGLE_ARROW

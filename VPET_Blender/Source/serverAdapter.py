@@ -298,6 +298,7 @@ def close_socket_d():
     if bpy.app.timers.is_registered(read_thread):
         print("Stopping thread")
         bpy.app.timers.unregister(read_thread)
+        bpy.utils.unregister_class(TimerModalOperator)
     if vpet.socket_d:
         vpet.socket_d.close()
         

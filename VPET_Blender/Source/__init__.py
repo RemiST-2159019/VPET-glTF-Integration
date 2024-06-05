@@ -44,6 +44,7 @@ bl_info = {
 
 from typing import Set
 import bpy
+from .bl_panel import AnimPathMenu
 from .bl_op import DoDistribute
 from .bl_op import StopDistribute
 from .bl_op import SetupScene
@@ -51,7 +52,10 @@ from .bl_op import InstallZMQ
 from .bl_op import SetupCharacter
 from .bl_op import MakeEditable
 from .bl_op import ParentToRoot
-from .bl_op import AddPathToCharacter
+from .bl_op import AddPath
+from .bl_op import AddWaypoint
+from .bl_op import EvalCurve
+from .bl_op import SendRpcCall
 from .bl_panel import VPET_PT_Panel
 from .tools import initialize
 from .settings import VpetData
@@ -60,7 +64,11 @@ from .updateTRS import RealTimeUpdaterOperator
 from .singleSelect import OBJECT_OT_single_select
 
 # imported classes to register
-classes = (DoDistribute, StopDistribute, SetupScene, VPET_PT_Panel, VpetProperties, InstallZMQ, RealTimeUpdaterOperator, OBJECT_OT_single_select, SetupCharacter, MakeEditable, ParentToRoot, AddPathToCharacter) 
+classes = (DoDistribute, StopDistribute, SetupScene, VPET_PT_Panel, VpetProperties, InstallZMQ, RealTimeUpdaterOperator, OBJECT_OT_single_select, SetupCharacter, MakeEditable, ParentToRoot, AnimPathMenu, AddPath, AddWaypoint, EvalCurve, SendRpcCall) 
+
+def add_menu_path(self, context):
+    print("Registering Add Path Menu Entry")
+    self.layout.menu(AnimPathMenu.bl_idname, icon='PLUGIN')
 
 ## Register classes and VpetSettings
 #
@@ -76,6 +84,10 @@ def register():
     
     bpy.types.Scene.vpet_properties = bpy.props.PointerProperty(type=VpetProperties)
     initialize()
+
+    # TODO Add entry to Add Object Menu for triggering new path and waypoints - bpy.types.VIEW3D_MT_mesh_add.append()
+    bpy.types.VIEW3D_MT_mesh_add.append(add_menu_path)
+
     print("Registered VPET Addon")
 
 ## Unregister for removal of Addon
@@ -89,4 +101,6 @@ def unregister():
             unregister_class(cls)
         except Exception as e:
             print(f"{cls.__name__} "+ str(e))
+
+    bpy.types.VIEW3D_MT_mesh_add.remove(add_menu_path)
     print("Unregistered VPET Addon")

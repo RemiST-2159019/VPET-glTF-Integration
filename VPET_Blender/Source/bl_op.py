@@ -31,9 +31,10 @@ Filmakademie (research<at>filmakademie.de).
 -----------------------------------------------------------------------------
 """
 
+from typing import Annotated
 import bpy
 from .serverAdapter import set_up_thread, close_socket_d, close_socket_s, close_socket_c, close_socket_u
-from .tools import cleanUp, installZmq, checkZMQ, setupCollections, parent_to_root, add_path
+from .tools import cleanUp, installZmq, checkZMQ, setupCollections, parent_to_root, add_path, add_point, eval_curve
 from .sceneDistribution import gatherSceneData, resendCurve
 from .GenerateSkeletonObj import process_armature
 
@@ -84,6 +85,7 @@ class StopDistribute(bpy.types.Operator):
     def execute(self, context):
         print('stop distribute')
         print('stop subscription')
+        self.report({'INFO'}, f'STOP SENDING Objects to VPET')
         reset()
         return {'FINISHED'}
 
@@ -142,15 +144,65 @@ class ParentToRoot(bpy.types.Operator):
         parent_to_root()
         return {'FINISHED'}
     
-class AddPathToCharacter(bpy.types.Operator):
+class AddPath(bpy.types.Operator):
     bl_idname = "object.add_path"
-    bl_label = "Pair curve obj to a character obj"
-    bl_description = 'Associate a curve object to a character object. The character will be animated by AnimHost to follow such path'
+    bl_label = "Add Control Path"
+    bl_description = 'Create an Object to act as a Control Path for a locomotion animation. The character will be animated by AnimHost to follow such path'
+    bl_options = {'REGISTER', 'UNDO'}
+
+    default_name = "AnimPath"
 
     def execute(self, context):
+        self.total_frames = 180
+        #TODO: eventually bind the path to a character in the scene
+        # if(context.active_object == "ARMATURE"):
+        #     print('Add Path START')
+        #     add_path(context.active_object)
+        #     #resendCurve()
+        # else:
+        #     print("Select a Character Object to execute this functionality")
         print('Add Path START')
-        #add_path()
-        resendCurve()
+        add_path(context.active_object, self.default_name)
+        return {'FINISHED'}
+    
+class AddWaypoint(bpy.types.Operator):
+    bl_idname = "object.add_control_point"
+    bl_label = "Create a new Control Point"
+    bl_description = 'Add a new Control Point to the (selected) Animation Path'
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        #TODO: eventually make it contextual to the selection of a specific path
+        # if(context.active_object == "ARMATURE"):
+        #     print('Add Path START')
+        #     add_path(context.active_object)
+        #     #resendCurve()
+        # else:
+        #     print("Select a Character Object to execute this functionality")
+        print('Add Point START')
+        add_point(bpy.data.objects[AddPath.default_name])
+        return {'FINISHED'}
+    
+class EvalCurve(bpy.types.Operator):
+    bl_idname = "object.eval_curve"
+    bl_label = "Re-evaluate the curve"
+    bl_description = 'Recalculate the Control Path given the new configuration of the Control Points'
+
+    def execute(self, context):
+        #TODO: to be triggered when deselecting any of the Control Points
+        print('Evaluate Curve START')
+        eval_curve(bpy.data.objects[AddPath.default_name])
+        return {'FINISHED'}
+    
+class SendRpcCall(bpy.types.Operator):
+    #TODO mod name dunctionality and txt
+    bl_idname = "object.rpc"
+    bl_label = "sendRPC"
+    bl_description = 'send the call to generate and stream animation to animhost'
+    
+    def execute(self, context):
+        print('rpc bep bop bep bop')
+        #TODO add functionality 
         return {'FINISHED'}
        
 
