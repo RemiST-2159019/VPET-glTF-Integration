@@ -34,6 +34,7 @@ Filmakademie (research<at>filmakademie.de).
 import bpy
 import sys
 import re
+import mathutils
 import subprocess  # use Python executable (for pip usage)
 from pathlib import Path  # Object-oriented filesystem paths since Python 3.4
 from .SceneObjects import SceneCharacterObject
@@ -50,6 +51,13 @@ def checkZMQ():
     except Exception as e:
         print(e)
         return False
+    
+def get_rna_ui():
+    rna_ui = bpy.context.object.get('_RNA_UI')
+    if rna_ui is None:
+        bpy.context.object['_RNA_UI'] = {}
+        rna_ui = bpy.context.object['_RNA_UI']
+    return rna_ui
     
 ## Create Collections for VPET objects
 def setupCollections():
@@ -188,36 +196,48 @@ def parent_to_root():
             select_hierarchy(selected_objects)
             switch_collection()
 
-def add_path(character):
+########
+def add_path(character, path_name):
     # Create default control point in the origin 
     point_zero = make_point()
 
     # Check whether an Animation Preview object is already present in the scene
-    if "AnimPrev" in bpy.context.scene.objects:
+    if path_name in bpy.context.scene.objects:
         # If yes, save it
         print("Animation Preview object found")
-        anim_prev = bpy.context.scene.objects["AnimPrev"]
+        anim_path = bpy.context.scene.objects[path_name]
     else:
         # If not, create it as an empty object 
         print("Creating new Animation Preview object")
-        anim_prev = bpy.data.objects.new("AnimPrev", None)
-        bpy.data.collections["Collection"].objects.link(anim_prev)  # Add anim_prev to the scene
+        anim_path = bpy.data.objects.new(path_name, None)
+        bpy.data.collections["Collection"].objects.link(anim_path)  # Add anim_prev to the scene
 
-    point_zero.parent = anim_prev
+    point_zero.parent = anim_path
+    #rna_ui = get_rna_ui()
     # Check whether AnimPrev has a Control Points attribute
-    if not "Control Points" in anim_prev:
+    if not "Control Points" in anim_path:
         # If not, create it as a list of one element (i.e. the default control point)
-        anim_prev["Control Points"] = [point_zero]
+        anim_path["Control Points"] = [point_zero]
     # Check whether AnimPrev has a Total Frames attribute
-    if not "Total Frames" in anim_prev:
+    if not "Total Frames" in anim_path:
         # If not, create it and give it the default value of 180
-        anim_prev["Total Frames"] = 180
+        anim_path["Total Frames"] = 180
+        # rna_ui["Total Frames"] = {
+        #     "description": "Total number of frames for the animation along the drawn path",
+        #     "default": 180,
+        #     "min": 0,
+        # }
+        '''TODO check this out bpy.ops.wm.properties_edit(data_path="object", property_name="Total Frames", property_type='INT', is_overridable_library=False, description="", use_soft_limits=False, default_int=(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), min_int=0, max_int=2147483647, soft_min_int=-2147483648, soft_max_int=2147483647, step_int=1, subtype='NONE', eval_string="180")
+'''
+    bpy.context.space_data.overlay.show_relationship_lines = False  # Disabling Relationship Lines to declutter scene view
+
     
     #? We could allow multiple paths in the scene (for now only one for simplifying testing)
     #? We could associate control paths to character by simply setting them as children of an armature object
-    #anim_prev.parent = character    # Set the selected character as the parent of the animation preview object
+    #anim_path.parent = character    # Set the selected character as the parent of the animation preview object
 
-def make_point():
+def make_point(spawn_location = (0, 0, 0)):
+    #TODO: Create better Control Point Mesh
     # Generate new planar isosceles triangle mesh called ptr_mesh
     vertices = [(-0.0625, 0, 0), (0.0625, 0, 0), (0, -0.25, 0)]
     edges = []
@@ -239,58 +259,79 @@ def make_point():
 
     # Create new object ptr_obj (with UI name "Pointer") that has ptr_mesh as a mesh
     ptr_obj = bpy.data.objects.new("Pointer", ptr_mesh)
-    ptr_obj.location = (0, 0, 0)                                # Placing ptr_obj in a random location (only for debug purposes)
+    ptr_obj.location = spawn_location                           # Placing ptr_obj at a specified location (when not specified, the default is origin)
     bpy.data.collections["Collection"].objects.link(ptr_obj)    # Add ptr_obj to the scene
+
+    # Lock Z-axis location and XY-axes rotation
+    ptr_obj.lock_location[2] = True
+    ptr_obj.lock_rotation[0] = True
+    ptr_obj.lock_rotation[1] = True
     
-    # Adding cutom property "Frame" and "Style Label"
+    # Adding custom property "Frame" and "Style Label"
     ptr_obj["Frame"] = 0
     ptr_obj["Style Label"] = "Walking"
     
     return ptr_obj
 
-def add_point(anim_prev):
-    new_point = make_point()                    # Create new point
-    new_point.parent = anim_prev                # Parent it to the (selected) path
+def add_point(anim_path):
+    spawn_offset = mathutils.Vector((0.3, -0.3, 0))
+    # Create new point, place it next to the latest created point, and select it
+    new_point = make_point(anim_path["Control Points"][-1].location + spawn_offset)
+    new_point.parent = anim_path        # Parent it to the selected (for now the only) path
+
     # Append it to the list of Control Points of that path
-    control_points = anim_prev["Control Points"]
+    control_points = anim_path["Control Points"]
     control_points.append(new_point)
-    anim_prev["Control Points"] = control_points
+    anim_path["Control Points"] = control_points
+
+    # Deselect all selected objects
+    for obj in bpy.context.selected_objects:
+        obj.select_set(False)
+
+    new_point.select_set(True)
 
     # Checking list of Control Points
-    print("Control Points:" + str(anim_prev["Control Points"]))
+    print("Control Points:" + str(anim_path["Control Points"]))
 
-def eval_curve(anim_prev):
+def eval_curve(anim_path):
     # Deselect all selected objects
     for obj in bpy.context.selected_objects:
         obj.select_set(False)
 
     # Check the children of the Animation Preview (or corresponding character)
     control_points = []
-    for child in anim_prev.children:
-        # Delete an eventual control path, and update the list of control points
-        if re.search(r'Control Path', child.name):
-            child.select_set(True)
-            bpy.ops.object.delete()
+    for child in anim_path.children:
+        if bpy.context.scene in child.users_scene:
+            print(child.name + " IS in the scene")
+            # Delete an eventual control path, and update the list of control points
+            if re.search(r'Control Path', child.name):
+                #child.select_set(True)
+                bpy.data.objects.remove(child, do_unlink=True)
+            else:
+                control_points.append(child)
         else:
-            control_points.append(child)
-    anim_prev["Control Points"] = control_points
+            print(child.name + " IS NOT in the scene")
+            bpy.data.objects.remove(child, do_unlink=True)
+    print("Number of Control Points for the spline " + str(len(control_points)))
+    anim_path["Control Points"] = control_points
 
     # Create Control Path from control_points elements
     bezier_curve_obj = bpy.data.curves.new('Control Path', type='CURVE')        # Create new Curve Object with name Control Path
     bezier_curve_obj.dimensions = '2D'                                          # The Curve Object is a 2D curve
 
     bezier_spline = bezier_curve_obj.splines.new('BEZIER')                      # Create new Bezier Spline "Mesh"
-    bezier_spline.bezier_points.add(len(anim_prev["Control Points"])-1)         # Add points to the Spline to match the length of the control_points list
-    for i, cp in enumerate(anim_prev["Control Points"]):
+    bezier_spline.bezier_points.add(len(anim_path["Control Points"])-1)         # Add points to the Spline to match the length of the control_points list
+    for i, cp in enumerate(anim_path["Control Points"]):
         bezier_spline.bezier_points[i].co = cp.location                         # Assign the poistion of the elements in control_list to the Bézier Points
         bezier_spline.bezier_points[i].handle_left_type = 'AUTO'                # Make the Bézier Points handles AUTO so that the resulting spline is smooth by default. The user will be able to modify them from blender UI
         bezier_spline.bezier_points[i].handle_right_type = 'AUTO'
 
     control_path = bpy.data.objects.new('Control Path', bezier_curve_obj)       # Create a new Control Path Object with the geometry data of the Bézier Curve
-    control_path.parent = anim_prev                                             # Make the Control Path a child of the Animation preview Object
+    control_path.parent = anim_path                                             # Make the Control Path a child of the Animation preview Object
     bpy.data.collections["Collection"].objects.link(control_path)               # Add the Control Path Object in the scene
 
     control_path.select_set(True) # For debugging
+    #TODO: interpolate values on spline
 
 def switch_collection():
     collection_name = "VPET_Collection"  # Specify the collection name

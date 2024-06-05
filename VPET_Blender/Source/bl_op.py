@@ -31,6 +31,7 @@ Filmakademie (research<at>filmakademie.de).
 -----------------------------------------------------------------------------
 """
 
+from typing import Annotated
 import bpy
 from .serverAdapter import set_up_thread, close_socket_d, close_socket_s, close_socket_c, close_socket_u
 from .tools import cleanUp, installZmq, checkZMQ, setupCollections, parent_to_root, add_path, add_point, eval_curve
@@ -145,10 +146,14 @@ class ParentToRoot(bpy.types.Operator):
     
 class AddPath(bpy.types.Operator):
     bl_idname = "object.add_path"
-    bl_label = "Add a Control Path to the Scene"
+    bl_label = "Add Control Path"
     bl_description = 'Create an Object to act as a Control Path for a locomotion animation. The character will be animated by AnimHost to follow such path'
+    bl_options = {'REGISTER', 'UNDO'}
+
+    default_name = "AnimPath"
 
     def execute(self, context):
+        self.total_frames = 180
         #TODO: eventually bind the path to a character in the scene
         # if(context.active_object == "ARMATURE"):
         #     print('Add Path START')
@@ -157,13 +162,14 @@ class AddPath(bpy.types.Operator):
         # else:
         #     print("Select a Character Object to execute this functionality")
         print('Add Path START')
-        add_path(context.active_object)
+        add_path(context.active_object, self.default_name)
         return {'FINISHED'}
     
 class AddWaypoint(bpy.types.Operator):
     bl_idname = "object.add_control_point"
     bl_label = "Create a new Control Point"
-    bl_description = 'Add a new Waypoint to the (selected) Control Path'
+    bl_description = 'Add a new Control Point to the (selected) Animation Path'
+    bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
         #TODO: eventually make it contextual to the selection of a specific path
@@ -174,7 +180,7 @@ class AddWaypoint(bpy.types.Operator):
         # else:
         #     print("Select a Character Object to execute this functionality")
         print('Add Point START')
-        add_point(bpy.data.objects["AnimPrev"])
+        add_point(bpy.data.objects[AddPath.default_name])
         return {'FINISHED'}
     
 class EvalCurve(bpy.types.Operator):
@@ -185,7 +191,7 @@ class EvalCurve(bpy.types.Operator):
     def execute(self, context):
         #TODO: to be triggered when deselecting any of the Control Points
         print('Evaluate Curve START')
-        eval_curve(bpy.data.objects["AnimPrev"])
+        eval_curve(bpy.data.objects[AddPath.default_name])
         return {'FINISHED'}
     
 class SendRpcCall(bpy.types.Operator):
