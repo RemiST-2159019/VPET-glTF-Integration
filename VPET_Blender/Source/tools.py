@@ -35,14 +35,31 @@ import bpy
 import sys
 import re
 import mathutils
+import blf
+import bpy_extras.view3d_utils
 import subprocess  # use Python executable (for pip usage)
 from pathlib import Path  # Object-oriented filesystem paths since Python 3.4
 from .SceneObjects import SceneCharacterObject
+
+# Handler for drawing text
+font_info = {
+    "font_id": 0,
+    "handler": None,
+}
+
+global auto_eval
 
 def initialize():
     global vpet, v_prop
     vpet = bpy.context.window_manager.vpet_data
     #v_prop = bpy.context.scene.vpet_properties
+    
+    auto_eval = True
+
+    # set the font drawing routine to run every frame
+    font_info["handler"] = bpy.types.SpaceView3D.draw_handler_add(
+        draw_pointer_numbers_callback, (None, None), 'WINDOW', 'POST_PIXEL')
+    
 
 def checkZMQ():
     try:
@@ -196,28 +213,36 @@ def parent_to_root():
             select_hierarchy(selected_objects)
             switch_collection()
 
-########
+'''
+----------------------BEGIN FUNCTIONS RELATED TO THE CONTROL PATH-------------------------------
+'''
 def add_path(character, path_name):
-    # Create default control point in the origin 
-    point_zero = make_point()
 
     # Check whether an Animation Preview object is already present in the scene
     if path_name in bpy.context.scene.objects:
         # If yes, save it
         print("Animation Preview object found")
         anim_path = bpy.context.scene.objects[path_name]
+
     else:
         # If not, create it as an empty object 
         print("Creating new Animation Preview object")
         anim_path = bpy.data.objects.new(path_name, None)
         bpy.data.collections["Collection"].objects.link(anim_path)  # Add anim_prev to the scene
 
-    point_zero.parent = anim_path
+        # Create default control point in the origin 
+        point_zero = make_point()
+        point_zero.parent = anim_path
+
     #rna_ui = get_rna_ui()
     # Check whether AnimPrev has a Control Points attribute
     if not "Control Points" in anim_path:
         # If not, create it as a list of one element (i.e. the default control point)
         anim_path["Control Points"] = [point_zero]
+    # Check whether AnimPrev has a Control Points attribute
+    if not "Auto Update" in anim_path:
+        # If not, create it as a list of one element (i.e. the default control point)
+        anim_path["Auto Update"] = True
     # Check whether AnimPrev has a Total Frames attribute
     if not "Total Frames" in anim_path:
         # If not, create it and give it the default value of 180
@@ -237,20 +262,16 @@ def add_path(character, path_name):
     #anim_path.parent = character    # Set the selected character as the parent of the animation preview object
 
 def make_point(spawn_location = (0, 0, 0)):
-    #TODO: Create better Control Point Mesh
     # Generate new planar isosceles triangle mesh called ptr_mesh
-    vertices = [(-0.0625, 0, 0), (0.0625, 0, 0), (0, -0.25, 0)]
+    vertices = [(-0.0625, 0, -0.0625), (0.0625, 0, 0.0625), (0, -0.25, 0), (0.0625, 0, -0.0625), (-0.0625, 0, 0.0625)]
     edges = []
-    faces = [[0, 1, 2]]
+    faces = [[4, 1, 2], [0, 3, 2], [0, 4, 2], [1, 3, 2], [4, 0, 1], [1, 0, 3]]
 
     # Check whether a mesh called "Pointer" is already present in the blender data
     if "Pointer" in bpy.data.meshes:
         # If yes, retrieve such mesh and modify its vertices to create an isosceles triangle
         print("Pointer mesh found")
         ptr_mesh = bpy.data.meshes["Pointer"]
-        ptr_mesh.vertices[0].co = vertices[0]
-        ptr_mesh.vertices[1].co = vertices[1]
-        ptr_mesh.vertices[2].co = vertices[2]
     else:
         # If not, create a new mesh with the geometry data defined above
         ptr_mesh = bpy.data.meshes.new("Pointer")
@@ -270,19 +291,41 @@ def make_point(spawn_location = (0, 0, 0)):
     # Adding custom property "Frame" and "Style Label"
     ptr_obj["Frame"] = 0
     ptr_obj["Style Label"] = "Walking"
+
+    # Customise shading option to highlight
+    bpy.context.space_data.shading.wireframe_color_type = 'OBJECT'
+    bpy.context.space_data.shading.color_type = 'OBJECT'
+    ptr_obj.color = (0.9, 0.1, 0, 1)    # Setting object displaying colour (not material!)
+    ptr_obj.show_wire = True
     
     return ptr_obj
 
-def add_point(anim_path):
-    spawn_offset = mathutils.Vector((0.3, -0.3, 0))
+def add_point(anim_path, pos=-1):
+    # Calculate offset proportionally to the dimensions of the mesh of the pointer (Control Point) object and in relation to the rotation of the previous control point
+    spawn_proportional_offset = mathutils.Vector((0, -1.5, 0))
+    base_rotation = anim_path.children[-1].rotation_euler
+    spawn_offset = anim_path.children[-1].dimensions * spawn_proportional_offset
+    spawn_offset.rotate(base_rotation)
+    
     # Create new point, place it next to the latest created point, and select it
-    new_point = make_point(anim_path["Control Points"][-1].location + spawn_offset)
-    new_point.parent = anim_path        # Parent it to the selected (for now the only) path
+    new_point = make_point(anim_path.children[-1].location + spawn_offset)
+    new_point.rotation_euler = base_rotation    # Rotate the pointer so that it aligns with the previous one
+    new_point.parent = anim_path                # Parent it to the selected (for now the only) path
 
-    # Append it to the list of Control Points of that path
-    control_points = anim_path["Control Points"]
-    control_points.append(new_point)
-    anim_path["Control Points"] = control_points
+    # Insert it to the list of Control Points of that path
+    # By default pos=-1, so the element is appended to the list
+    if len(anim_path["Control Points"]) > 0:
+        control_points = anim_path["Control Points"]
+        control_points.insert(pos, new_point)
+        anim_path["Control Points"] = control_points
+    else:
+        del anim_path["Control Points"]
+        anim_path["Control Points"] = [new_point]
+    #TODO: if pos>=0 rename and sort anim_path.children
+
+    for area in bpy.context.screen.areas:
+        if area.type == 'PROPERTIES':
+            area.tag_redraw()
 
     # Deselect all selected objects
     for obj in bpy.context.selected_objects:
@@ -293,6 +336,10 @@ def add_point(anim_path):
     # Checking list of Control Points
     print("Control Points:" + str(anim_path["Control Points"]))
 
+    # Trigger Path Updating (if the functionality is enabled)
+    if anim_path["Auto Update"]:
+        eval_curve(anim_path)
+
 def eval_curve(anim_path):
     # Deselect all selected objects
     for obj in bpy.context.selected_objects:
@@ -301,18 +348,12 @@ def eval_curve(anim_path):
     # Check the children of the Animation Preview (or corresponding character)
     control_points = []
     for child in anim_path.children:
-        if bpy.context.scene in child.users_scene:
-            print(child.name + " IS in the scene")
-            # Delete an eventual control path, and update the list of control points
-            if re.search(r'Control Path', child.name):
-                #child.select_set(True)
-                bpy.data.objects.remove(child, do_unlink=True)
-            else:
-                control_points.append(child)
-        else:
-            print(child.name + " IS NOT in the scene")
+        if re.search(r'Control Path', child.name):
             bpy.data.objects.remove(child, do_unlink=True)
-    print("Number of Control Points for the spline " + str(len(control_points)))
+        else:
+            control_points.append(child)
+    
+    #print("Number of Control Points for the spline " + str(len(control_points)))
     anim_path["Control Points"] = control_points
 
     # Create Control Path from control_points elements
@@ -330,8 +371,47 @@ def eval_curve(anim_path):
     control_path.parent = anim_path                                             # Make the Control Path a child of the Animation preview Object
     bpy.data.collections["Collection"].objects.link(control_path)               # Add the Control Path Object in the scene
 
-    control_path.select_set(True) # For debugging
+    for area in bpy.context.screen.areas:
+        if area.type == 'PROPERTIES':
+            area.tag_redraw()
+
     #TODO: interpolate values on spline
+
+# Function for drawing number labels next to the control points
+def draw_pointer_numbers_callback(self, context):
+    # BLF drawing routine
+    anchor_3d_pos = mathutils.Vector((0,0,0))
+    if "AnimPath" in bpy.context.scene.objects:
+        anim_path = bpy.context.scene.objects["AnimPath"]
+        # for every control point of the animation path
+        for i, cp in enumerate(anim_path["Control Points"]):
+            # If the Control POint is not hidden in the viewport
+            if not (anim_path["Control Points"][i] == None or anim_path["Control Points"][i].hide_get()):
+                # Getting 3D position of the control point (taking in account a 3D offset, so that the label can follow the mesh orientation)
+                offset_3d = mathutils.Vector((-0.1, 0, 0.1))
+                offset_3d.rotate(anim_path["Control Points"][i].rotation_euler)
+                anchor_3d_pos = anim_path["Control Points"][i].location + offset_3d
+                # Getting the corresponding 2D viewport location of the 3D location of the control point
+                txt_x, txt_y = bpy_extras.view3d_utils.location_3d_to_region_2d(
+                    bpy.context.region,
+                    bpy.context.space_data.region_3d,
+                    anchor_3d_pos)
+                font_id = font_info["font_id"]
+            
+            
+                # Setting text position, size, colour (white)
+                blf.position(font_id,
+                             txt_x,
+                             txt_y,
+                             0)
+                blf.size(font_id, 30.0)
+                blf.color(font_id, 1, 1, 1, 1)
+                # Writing text (the number relative to the position of the pointer in the list of control points in the path)
+                blf.draw(font_id, str(i))
+
+'''
+----------------------END FUNCTIONS RELATED TO THE CONTROL PATH-------------------------------
+'''
 
 def switch_collection():
     collection_name = "VPET_Collection"  # Specify the collection name

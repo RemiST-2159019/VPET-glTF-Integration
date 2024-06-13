@@ -44,6 +44,7 @@ bl_info = {
 
 from typing import Set
 import bpy
+import os
 from .bl_panel import AnimPathMenu
 from .bl_op import DoDistribute
 from .bl_op import StopDistribute
@@ -55,6 +56,8 @@ from .bl_op import ParentToRoot
 from .bl_op import AddPath
 from .bl_op import AddWaypoint
 from .bl_op import EvalCurve
+from .bl_op import AutoEval
+from .bl_op import ToggleAutoEval
 from .bl_op import SendRpcCall
 from .bl_panel import VPET_PT_Panel
 from .tools import initialize
@@ -64,7 +67,8 @@ from .updateTRS import RealTimeUpdaterOperator
 from .singleSelect import OBJECT_OT_single_select
 
 # imported classes to register
-classes = (DoDistribute, StopDistribute, SetupScene, VPET_PT_Panel, VpetProperties, InstallZMQ, RealTimeUpdaterOperator, OBJECT_OT_single_select, SetupCharacter, MakeEditable, ParentToRoot, AnimPathMenu, AddPath, AddWaypoint, EvalCurve, SendRpcCall) 
+classes = (DoDistribute, StopDistribute, SetupScene, VPET_PT_Panel, VpetProperties, InstallZMQ, RealTimeUpdaterOperator, OBJECT_OT_single_select,
+           SetupCharacter, MakeEditable, ParentToRoot, AnimPathMenu, AddPath, AddWaypoint, EvalCurve, ToggleAutoEval, AutoEval, SendRpcCall) 
 
 def add_menu_path(self, context):
     print("Registering Add Path Menu Entry")
@@ -85,8 +89,10 @@ def register():
     bpy.types.Scene.vpet_properties = bpy.props.PointerProperty(type=VpetProperties)
     initialize()
 
-    # TODO Add entry to Add Object Menu for triggering new path and waypoints - bpy.types.VIEW3D_MT_mesh_add.append()
-    bpy.types.VIEW3D_MT_mesh_add.append(add_menu_path)
+    bpy.types.VIEW3D_MT_mesh_add.append(add_menu_path)      # Adding a submenu with buttons to add a new Control Path and a new Control Point to the Add-Mesh Menu
+    bpy.types.VIEW3D_MT_curve_add.append(add_menu_path)     # Adding a submenu with buttons to add a new Control Path and a new Control Point to the Add-Curve Menu
+
+    bpy.app.handlers.depsgraph_update_post.append(EvalCurve.on_delete_update_handler)   # Adding auto update handler for the animation path. Called any time the scene graph is updated
 
     print("Registered VPET Addon")
 
