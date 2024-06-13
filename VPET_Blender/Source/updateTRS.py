@@ -7,6 +7,7 @@ class RealTimeUpdaterOperator(bpy.types.Operator):
 
     _timer = None
 
+    
     def modal(self, context, event):
         if event.type == 'TIMER':
             self.check_for_updates(context)
@@ -46,6 +47,7 @@ class RealTimeUpdaterOperator(bpy.types.Operator):
         return sum((c1 - c2) ** 2 for c1, c2 in zip(color1, color2)) ** 0.5
 
     def check_for_updates(self, context):
+        print("Update!")
         for obj in bpy.data.collections.get("VPET_Collection").objects:
             if obj.name not in self.start_transforms:
                 continue

@@ -33,7 +33,7 @@ Filmakademie (research<at>filmakademie.de).
 
 import bpy
 
-from .bl_op import AddPath, AddWaypoint, EvalCurve
+from .bl_op import AddPath, AddWaypoint, EvalCurve, ToggleAutoEval
 
 ## Interface
 #  
@@ -61,6 +61,8 @@ class VPET_PT_Panel(bpy.types.Panel):
         row.operator(AddPath.bl_idname, text='Add Control Path')
         row.operator(AddWaypoint.bl_idname, text='Add New Waypoint')
         row.operator(EvalCurve.bl_idname, text='Evaluate Curve')            #TODO: to be triggered when deselecting any of the Control Points
+        row = layout.row()
+        row.operator(ToggleAutoEval.bl_idname, text=ToggleAutoEval.bl_label)
         
         row = layout.row()
         row.operator('object.zmq_distribute', text = "Do Distribute")
