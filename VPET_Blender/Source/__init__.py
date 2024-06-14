@@ -45,7 +45,6 @@ bl_info = {
 from typing import Set
 import bpy
 import os
-from .bl_panel import AnimPathMenu
 from .bl_op import DoDistribute
 from .bl_op import StopDistribute
 from .bl_op import SetupScene
@@ -55,11 +54,15 @@ from .bl_op import MakeEditable
 from .bl_op import ParentToRoot
 from .bl_op import AddPath
 from .bl_op import AddWaypoint
+from .bl_op import ControlPointProps
 from .bl_op import EvalCurve
 from .bl_op import AutoEval
 from .bl_op import ToggleAutoEval
 from .bl_op import SendRpcCall
 from .bl_panel import VPET_PT_Panel
+from .bl_panel import VPET_PT_Anim_Path_Panel
+from .bl_panel import VPET_PT_Anim_Path_Menu
+from .bl_panel import VPET_PT_Control_Points_Panel
 from .tools import initialize
 from .settings import VpetData
 from .settings import VpetProperties
@@ -67,12 +70,12 @@ from .updateTRS import RealTimeUpdaterOperator
 from .singleSelect import OBJECT_OT_single_select
 
 # imported classes to register
-classes = (DoDistribute, StopDistribute, SetupScene, VPET_PT_Panel, VpetProperties, InstallZMQ, RealTimeUpdaterOperator, OBJECT_OT_single_select,
-           SetupCharacter, MakeEditable, ParentToRoot, AnimPathMenu, AddPath, AddWaypoint, EvalCurve, ToggleAutoEval, AutoEval, SendRpcCall) 
+classes = (DoDistribute, StopDistribute, SetupScene, VPET_PT_Panel, VPET_PT_Anim_Path_Panel, VPET_PT_Anim_Path_Menu, VPET_PT_Control_Points_Panel, VpetProperties, InstallZMQ, RealTimeUpdaterOperator, OBJECT_OT_single_select,
+           SetupCharacter, MakeEditable, ParentToRoot, AddPath, AddWaypoint, ControlPointProps, EvalCurve, ToggleAutoEval, AutoEval, SendRpcCall) 
 
 def add_menu_path(self, context):
     print("Registering Add Path Menu Entry")
-    self.layout.menu(AnimPathMenu.bl_idname, icon='PLUGIN')
+    self.layout.menu(VPET_PT_Anim_Path_Menu.bl_idname, icon='PLUGIN')
 
 ## Register classes and VpetSettings
 #
@@ -87,6 +90,8 @@ def register():
             print(f"{cls.__name__} "+ str(e))
     
     bpy.types.Scene.vpet_properties = bpy.props.PointerProperty(type=VpetProperties)
+    #bpy.types.Scene.control_point_settings = bpy.props.CollectionProperty(type=ControlPointProps)
+    #my_item = bpy.context.scene.control_point_settings.add()
     initialize()
 
     bpy.types.VIEW3D_MT_mesh_add.append(add_menu_path)      # Adding a submenu with buttons to add a new Control Path and a new Control Point to the Add-Mesh Menu

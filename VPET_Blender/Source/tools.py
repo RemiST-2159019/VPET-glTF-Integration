@@ -312,13 +312,18 @@ def add_point(anim_path, pos=-1):
     new_point.rotation_euler = base_rotation    # Rotate the pointer so that it aligns with the previous one
     new_point.parent = anim_path                # Parent it to the selected (for now the only) path
 
-    # Insert it to the list of Control Points of that path
-    # By default pos=-1, so the element is appended to the list
+    print("Number of Control Points " + str(len(anim_path["Control Points"])))
     if len(anim_path["Control Points"]) > 0:
+        # If Control Path is already populated
+        # Insert it to the list of Control Points of that path
+        # By default pos=-1, so the element is appended to the list
+        if pos < 0:
+            pos = len(anim_path["Control Points"])
         control_points = anim_path["Control Points"]
         control_points.insert(pos, new_point)
         anim_path["Control Points"] = control_points
     else:
+        # If Control Points has no elements, delete the property and create it ex-novo
         del anim_path["Control Points"]
         anim_path["Control Points"] = [new_point]
     #TODO: if pos>=0 rename and sort anim_path.children
@@ -347,11 +352,13 @@ def eval_curve(anim_path):
 
     # Check the children of the Animation Preview (or corresponding character)
     control_points = []
+    cp_names = []   # Helper list containing the names of the control points left in the scene
     for child in anim_path.children:
         if re.search(r'Control Path', child.name):
             bpy.data.objects.remove(child, do_unlink=True)
         else:
             control_points.append(child)
+            cp_names.append(child.name)
     
     #print("Number of Control Points for the spline " + str(len(control_points)))
     anim_path["Control Points"] = control_points
@@ -384,13 +391,15 @@ def draw_pointer_numbers_callback(self, context):
     if "AnimPath" in bpy.context.scene.objects:
         anim_path = bpy.context.scene.objects["AnimPath"]
         # for every control point of the animation path
-        for i, cp in enumerate(anim_path["Control Points"]):
-            # If the Control POint is not hidden in the viewport
-            if not (anim_path["Control Points"][i] == None or anim_path["Control Points"][i].hide_get()):
+        for i in range(len(anim_path["Control Points"])):
+            cp = anim_path["Control Points"][i]
+            # cp_props = anim_path["Control Points Properties"][i]
+            # If the Control Point is not hidden in the viewport
+            if not (cp == None or cp.hide_get()):
                 # Getting 3D position of the control point (taking in account a 3D offset, so that the label can follow the mesh orientation)
                 offset_3d = mathutils.Vector((-0.1, 0, 0.1))
-                offset_3d.rotate(anim_path["Control Points"][i].rotation_euler)
-                anchor_3d_pos = anim_path["Control Points"][i].location + offset_3d
+                offset_3d.rotate(cp.rotation_euler)
+                anchor_3d_pos = cp.location + offset_3d
                 # Getting the corresponding 2D viewport location of the 3D location of the control point
                 txt_x, txt_y = bpy_extras.view3d_utils.location_3d_to_region_2d(
                     bpy.context.region,

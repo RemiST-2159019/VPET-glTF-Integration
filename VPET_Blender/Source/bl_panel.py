@@ -33,16 +33,18 @@ Filmakademie (research<at>filmakademie.de).
 
 import bpy
 
-from .bl_op import AddPath, AddWaypoint, EvalCurve, ToggleAutoEval
+from .bl_op import AddPath, AddWaypoint, EvalCurve, ToggleAutoEval, ControlPointProps
 
 ## Interface
-#  
-class VPET_PT_Panel(bpy.types.Panel):
-    bl_idname = "VPET_PT_PANEL"
-    bl_label = "VPET"
+# 
+class VPET_Panel:
     bl_category = "VPET Addon"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
+
+class VPET_PT_Panel(VPET_Panel, bpy.types.Panel):
+    bl_idname = "VPET_PT_PANEL"
+    bl_label = "VPET"
     
     def draw(self, context):
         layout = self.layout
@@ -56,13 +58,6 @@ class VPET_PT_Panel(bpy.types.Panel):
         row.operator('object.setup_character', text='Setup Character for VPET')
         row.operator('object.make_obj_editable', text='Make selected Editable')
         row.operator('object.parent_to_root', text='Parent TO Root')
-
-        row = layout.row()
-        row.operator(AddPath.bl_idname, text='Add Control Path')
-        row.operator(AddWaypoint.bl_idname, text='Add New Waypoint')
-        row.operator(EvalCurve.bl_idname, text='Evaluate Curve')            #TODO: to be triggered when deselecting any of the Control Points
-        row = layout.row()
-        row.operator(ToggleAutoEval.bl_idname, text=ToggleAutoEval.bl_label)
         
         row = layout.row()
         row.operator('object.zmq_distribute', text = "Do Distribute")
@@ -81,7 +76,48 @@ class VPET_PT_Panel(bpy.types.Panel):
         row = layout.row()
         row.operator('object.rpc', text = "RPC CHANGE LATER")
 
-class AnimPathMenu(bpy.types.Menu):
+class VPET_PT_Anim_Path_Panel(VPET_Panel, bpy.types.Panel):
+    bl_idname = "VPET_PT_ANIM_PATH_PANEL"
+    bl_label = "Animation Path"
+
+    def draw(self, context):
+        layout = self.layout
+        row = layout.row()
+        row.operator(AddPath.bl_idname, text='Add Control Path')
+        row.operator(AddWaypoint.bl_idname, text='Add New Waypoint')
+        row.operator(EvalCurve.bl_idname, text='Evaluate Curve')
+        row = layout.row()
+        row.operator(ToggleAutoEval.bl_idname, text=ToggleAutoEval.bl_label)
+
+class VPET_PT_Control_Points_Panel(VPET_Panel, bpy.types.Panel):
+    bl_idname = "VPET_PT_control_points_panel"
+    bl_label = "Control Points"
+
+    # By setting VPET_PT_Anim_Path_Panel as parent of Control_Points_Panel, this panel will be nested into its parent in the UI 
+    bl_parent_id = VPET_PT_Anim_Path_Panel.bl_idname
+
+    def draw(self, context):
+        layout = self.layout
+
+        if AddPath.default_name in bpy.data.objects:
+            # Getting Control Points Properties
+            cp_props = self.layout.operator(ControlPointProps.bl_idname)
+            anim_path = bpy.data.objects[AddPath.default_name]
+            # Setting the owner of the data, if it exists
+            for i in range(len(anim_path["Control Points"])):
+                cp = anim_path["Control Points"][i]
+                row = layout.row()
+                # Highlight the selected Control Point by marking the panel entry with a dot
+                if context.object.name == cp.name:
+                    row.label(text=cp.name, icon='DOT')
+                    #row.prop(cp_props, "position", slider=False)
+                    row.prop(cp_props, "frame", slider=True)
+                    row.prop_enum(cp_props, "style", "Running")
+                else:
+                    row.label(text=cp.name)
+                
+
+class VPET_PT_Anim_Path_Menu(bpy.types.Menu):
     bl_label = "Animation Path"	   
     bl_idname = "OBJECT_MT_custom_spline_menu"
 

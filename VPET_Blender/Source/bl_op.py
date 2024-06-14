@@ -190,6 +190,36 @@ class AddWaypoint(bpy.types.Operator):
         print('Add Point START')
         add_point(bpy.data.objects[AddPath.default_name])
         return {'FINISHED'}
+    
+# Operator to manage the Properties of the Animation Control Points
+class ControlPointProps(bpy.types.Operator):
+    bl_idname = "path.control_point_props"
+    bl_label = "Confirm Changes"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def get_items():
+        items = [("Walking", "Walking", "Walking Locomotion Style"),
+                 ("Running", "Running", "Running Locomotion Style"),
+                 ("Jumping", "Jumping", "Jumping Locomotion Style")]
+        return items
+    
+    def update_position(self, context):
+        print("Update! " + str(self.position))
+
+    def update_frame(self, context):
+        print("Update! " + str(self.frame))
+
+    def update_style(self, context):
+        print("Update! " + self.style)
+
+    #pointer_name: bpy.props.StringProperty(name="Name")
+    position: bpy.props.IntProperty(name="Position", update=update_position)
+    frame: bpy.props.IntProperty(name="Frame", update=update_frame)
+    style: bpy.props.EnumProperty(items=get_items(), name="Style", description="Choose a Locomotion Style", default="Running", update=update_style)
+
+    def execute(self, context):
+        print("Setting Control Point Properties")
+        return {'FINISHED'}
 
 # Operator to add a new Animation Path
 # The execution is triggered by a button in the VPET Panel or by an entry in the Add Menu
@@ -263,28 +293,25 @@ class AutoEval(bpy.types.Operator):
     def modal(self, context, event):
         if (event.type == 'DEL' or event.type == 'X') and event.value == 'RELEASE':
             if AddPath.default_name in bpy.data.objects:
-                anim_path = bpy.data.objects[AddPath.default_name]
-                if anim_path["Auto Update"]:
-                    eval_curve(anim_path)
+                if self.anim_path["Auto Update"]:
+                    eval_curve(self.anim_path)
             else:
                 return {'FINISHED'}
-            
 
         # If the Auto Update property is active, and Enter or the Left Mouse Button are clicked, update the animation curve
         if  (event.type == 'LEFTMOUSE' or event.type == 'RET' or event.type == 'NUMPAD_ENTER') and event.value == 'RELEASE' and \
             (not context.object == None and (context.object.name == AddPath.default_name or ((not context.object.parent == None) and  context.object.parent.name == AddPath.default_name))) and \
-            bpy.data.objects[AddPath.default_name]["Auto Update"]:
-            eval_curve(bpy.data.objects[AddPath.default_name])
+            not self.anim_path == None and self.anim_path["Auto Update"]:
+            eval_curve(self.anim_path)
         
         # If the active object is one of the children of AnimPath, listen to 'Shift + =' or 'Ctrl + +' Release events,
         # this will trigger the addition of a new point to the animation path
         if  (context.active_object in bpy.data.objects[AddPath.default_name].children) and \
             ((event.type == 'PLUS') or (event.type == 'NUMPAD_PLUS' and event.ctrl) or (event.type == 'EQUAL' and event.shift)) and \
             event.value == 'RELEASE':
-            anim_path = bpy.data.objects[AddPath.default_name]
-            new_point_index = anim_path["Control Points"].index(context.active_object) + 1
+            new_point_index = self.anim_path["Control Points"].index(context.active_object) + 1
             print("Insert new point at: " + str(new_point_index))
-            add_point(bpy.data.objects[AddPath.default_name])   #TODO: pass also new_point_index
+            add_point(self.anim_path)   #TODO: pass also new_point_index
 
         return {'PASS_THROUGH'}
     
