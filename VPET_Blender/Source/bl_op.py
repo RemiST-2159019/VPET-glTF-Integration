@@ -31,9 +31,13 @@ Filmakademie (research<at>filmakademie.de).
 -----------------------------------------------------------------------------
 """
 
+from typing import Annotated, Set
 import bpy
+import re
+
+from bpy.types import Context
 from .serverAdapter import set_up_thread, close_socket_d, close_socket_s, close_socket_c, close_socket_u
-from .tools import cleanUp, installZmq, checkZMQ, setupCollections, parent_to_root, add_path
+from .tools import cleanUp, installZmq, checkZMQ, setupCollections, parent_to_root, add_path, add_point, eval_curve
 from .sceneDistribution import gatherSceneData, resendCurve
 from .GenerateSkeletonObj import process_armature
 
@@ -84,6 +88,7 @@ class StopDistribute(bpy.types.Operator):
     def execute(self, context):
         print('stop distribute')
         print('stop subscription')
+        self.report({'INFO'}, f'STOP SENDING Objects to VPET')
         reset()
         return {'FINISHED'}
 
@@ -141,16 +146,164 @@ class ParentToRoot(bpy.types.Operator):
         print('Parent obj')
         parent_to_root()
         return {'FINISHED'}
-    
-class AddPathToCharacter(bpy.types.Operator):
+   
+# Operator to add a new Animation Path
+# The execution is triggered by a button in the VPET Panel or by an entry in the Add Menu
+class AddPath(bpy.types.Operator):
     bl_idname = "object.add_path"
-    bl_label = "Pair curve obj to a character obj"
-    bl_description = 'Associate a curve object to a character object. The character will be animated by AnimHost to follow such path'
+    bl_label = "Add Control Path"
+    bl_description = 'Create an Object to act as a Control Path for a locomotion animation. The character will be animated by AnimHost to follow such path'
+    bl_options = {'REGISTER', 'UNDO'}
+
+    default_name = "AnimPath"
 
     def execute(self, context):
+        self.total_frames = 180
+        #TODO: eventually bind the path to a character in the scene
+        # if(context.active_object == "ARMATURE"):
+        #     print('Add Path START')
+        #     add_path(context.active_object)
+        #     #resendCurve()
+        # else:
+        #     print("Select a Character Object to execute this functionality")
         print('Add Path START')
-        #add_path()
-        resendCurve()
+        add_path(context.active_object, self.default_name)  # Call the function resposible of creating the animation path
+        bpy.ops.path.auto_eval('INVOKE_DEFAULT')            # Invoke Modal Operaton for automatically update the Animation Path in (almost) real-time
+        return {'FINISHED'}
+
+# Operator to add a new Animation Control Point
+# The execution is triggered by a button in the VPET Panel or by an entry in the Add Menu
+class AddWaypoint(bpy.types.Operator):
+    bl_idname = "object.add_control_point"
+    bl_label = "Create a new Control Point"
+    bl_description = 'Add a new Control Point to the (selected) Animation Path'
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        #TODO: eventually make it contextual to the selection of a specific path
+        # if(context.active_object == "ARMATURE"):
+        #     print('Add Path START')
+        #     add_path(context.active_object)
+        #     #resendCurve()
+        # else:
+        #     print("Select a Character Object to execute this functionality")
+        print('Add Point START')
+        add_point(bpy.data.objects[AddPath.default_name])
+        return {'FINISHED'}
+
+# Operator to add a new Animation Path
+# The execution is triggered by a button in the VPET Panel or by an entry in the Add Menu
+class EvalCurve(bpy.types.Operator):
+    bl_idname = "object.eval_curve"
+    bl_label = "Re-evaluate the curve"
+    bl_description = 'Recalculate the Control Path given the new configuration of the Control Points'
+
+    def execute(self, context):
+        print('Evaluate Curve START')
+        anim_path = bpy.data.objects[AddPath.default_name]
+        # Check for deleted control points and evtl. do some cleanup before updating the curve 
+        for child in anim_path.children:
+            if not bpy.context.scene in child.users_scene:
+                print(child.name + " IS NOT in the scene")
+                bpy.data.objects.remove(child, do_unlink=True)
+                eval_curve(anim_path)
+        
+        for area in bpy.context.screen.areas:
+            if area.type == 'PROPERTIES':
+                area.tag_redraw()
+        
+        return {'FINISHED'}
+    
+    def on_delete_update_handler(scene):
+        anim_path = bpy.data.objects[AddPath.default_name]
+        if anim_path["Auto Update"]:
+            # Check for deleted control points and evtl. do some cleanup before updating the curve  
+            for child in anim_path.children:
+                if not bpy.context.scene in child.users_scene:
+                    print(child.name + " IS NOT in the scene")
+                    bpy.data.objects.remove(child, do_unlink=True)
+                    eval_curve(anim_path)
+            
+            for area in bpy.context.screen.areas:
+                if area.type == 'PROPERTIES':
+                    area.tag_redraw()
+    
+class ToggleAutoEval(bpy.types.Operator):
+    bl_idname = "object.toggle_auto_eval"
+    bl_label = "Disable Path Auto Update"
+    bl_description = 'Enable/Disable the automatic re-calculation of the path'
+
+    def execute(self, context):
+        # If the toggling should happen only when the path is selected, add also the following condition -> and bpy.data.objects[AddPath.default_name].select_get()
+        if (AddPath.default_name in bpy.data.objects):
+            anim_path = bpy.data.objects[AddPath.default_name]
+            anim_path["Auto Update"] = not anim_path["Auto Update"]
+            # Forcing update visualisation of Property Panel
+            for area in bpy.context.screen.areas:
+                if area.type == 'PROPERTIES':
+                    area.tag_redraw()
+
+            if anim_path["Auto Update"]:
+                ToggleAutoEval.bl_label = "Disable Path Auto Update"
+            else:
+                ToggleAutoEval.bl_label = "Enable Path Auto Update"
+
+        return {'FINISHED'}
+    
+class AutoEval(bpy.types.Operator):
+    bl_idname = "path.auto_eval"
+    bl_label = "Automatic Path Updating on Translate Operator"
+
+    def __init__(self):
+        print("Start")
+
+    def __del__(self):
+        print("End")
+
+    def modal(self, context, event):
+        if (event.type == 'DEL' or event.type == 'X') and event.value == 'RELEASE':
+            if AddPath.default_name in bpy.data.objects:
+                anim_path = bpy.data.objects[AddPath.default_name]
+                if anim_path["Auto Update"]:
+                    eval_curve(anim_path)
+            else:
+                return {'FINISHED'}
+            
+
+        # If the Auto Update property is active, and Enter or the Left Mouse Button are clicked, update the animation curve
+        if  (event.type == 'LEFTMOUSE' or event.type == 'RET' or event.type == 'NUMPAD_ENTER') and event.value == 'RELEASE' and \
+            (not context.object == None and (context.object.name == AddPath.default_name or ((not context.object.parent == None) and  context.object.parent.name == AddPath.default_name))) and \
+            bpy.data.objects[AddPath.default_name]["Auto Update"]:
+            eval_curve(bpy.data.objects[AddPath.default_name])
+        
+        # If the active object is one of the children of AnimPath, listen to 'Shift + =' or 'Ctrl + +' Release events,
+        # this will trigger the addition of a new point to the animation path
+        if  (context.active_object in bpy.data.objects[AddPath.default_name].children) and \
+            ((event.type == 'PLUS') or (event.type == 'NUMPAD_PLUS' and event.ctrl) or (event.type == 'EQUAL' and event.shift)) and \
+            event.value == 'RELEASE':
+            anim_path = bpy.data.objects[AddPath.default_name]
+            new_point_index = anim_path["Control Points"].index(context.active_object) + 1
+            print("Insert new point at: " + str(new_point_index))
+            add_point(bpy.data.objects[AddPath.default_name])   #TODO: pass also new_point_index
+
+        return {'PASS_THROUGH'}
+    
+    def invoke(self, context, event):
+        # Add the modal listener to the list of called handlers and save the Animation Path object
+        context.window_manager.modal_handler_add(self)
+        self.anim_path = bpy.data.objects[AddPath.default_name]
+        self.path_changed = False
+        return {'RUNNING_MODAL'}
+    
+class SendRpcCall(bpy.types.Operator):
+    #TODO mod name dunctionality and txt
+    bl_idname = "object.rpc"
+    bl_label = "sendRPC"
+    bl_description = 'send the call to generate and stream animation to animhost'
+    
+    def execute(self, context):
+        print('rpc bep bop bep bop')
+        #TODO add functionality 
         return {'FINISHED'}
        
 
