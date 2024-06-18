@@ -90,7 +90,7 @@ def register():
             print(f"{cls.__name__} "+ str(e))
     
     bpy.types.Scene.vpet_properties = bpy.props.PointerProperty(type=VpetProperties)
-    #bpy.types.Scene.control_point_settings = bpy.props.CollectionProperty(type=ControlPointProps)
+    bpy.types.Scene.control_point_settings = bpy.props.PointerProperty(type=ControlPointProps)
     #my_item = bpy.context.scene.control_point_settings.add()
     initialize()
 
@@ -98,6 +98,7 @@ def register():
     bpy.types.VIEW3D_MT_curve_add.append(add_menu_path)     # Adding a submenu with buttons to add a new Control Path and a new Control Point to the Add-Curve Menu
 
     bpy.app.handlers.depsgraph_update_post.append(EvalCurve.on_delete_update_handler)   # Adding auto update handler for the animation path. Called any time the scene graph is updated
+    bpy.app.handlers.depsgraph_update_post.append(ControlPointProps.update_property_ui)   # Adding auto update handler for the collection of control point properties. Called any time the scene graph is updated
 
     print("Registered VPET Addon")
 

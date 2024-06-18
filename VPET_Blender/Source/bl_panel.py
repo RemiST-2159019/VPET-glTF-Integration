@@ -33,7 +33,7 @@ Filmakademie (research<at>filmakademie.de).
 
 import bpy
 
-from .bl_op import AddPath, AddWaypoint, EvalCurve, ToggleAutoEval, ControlPointProps
+from .bl_op import AddPath, AddWaypoint, EvalCurve, ToggleAutoEval
 
 ## Interface
 # 
@@ -101,18 +101,20 @@ class VPET_PT_Control_Points_Panel(VPET_Panel, bpy.types.Panel):
 
         if AddPath.default_name in bpy.data.objects:
             # Getting Control Points Properties
-            cp_props = self.layout.operator(ControlPointProps.bl_idname)
+            cp_props = bpy.context.scene.control_point_settings
             anim_path = bpy.data.objects[AddPath.default_name]
             # Setting the owner of the data, if it exists
             for i in range(len(anim_path["Control Points"])):
                 cp = anim_path["Control Points"][i]
                 row = layout.row()
                 # Highlight the selected Control Point by marking the panel entry with a dot
-                if context.object.name == cp.name:
-                    row.label(text=cp.name, icon='DOT')
-                    #row.prop(cp_props, "position", slider=False)
-                    row.prop(cp_props, "frame", slider=True)
-                    row.prop_enum(cp_props, "style", "Running")
+                if (not context.active_object == None) and (context.active_object.name == cp.name):
+                    row.label(text=cp.name) # eventually also icon='DOT'
+                    row.prop(cp_props, "position", slider=False)
+                    row.prop(cp_props, "frame", slider=False)
+                    row.prop(cp_props, "ease_in", slider=True)
+                    row.prop(cp_props, "ease_out", slider=True)
+                    row.prop_menu_enum(cp_props, "style")
                 else:
                     row.label(text=cp.name)
                 
