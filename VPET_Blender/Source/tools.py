@@ -307,17 +307,25 @@ def make_point(spawn_location = (0, 0, 0)):
     return ptr_obj
 
 def add_point(anim_path, pos=-1, after=True):
-    insert = 1 if after else -1
     spawn_proportional_offset = mathutils.Vector((0, -1.5, 0))
-    
-    # Calculate offset proportionally to the dimensions of the mesh of the pointer (Control Point) object and in relation to the rotation of the PREVIOUS control point
-    base_rotation = anim_path.children[pos].rotation_euler
-    spawn_offset = anim_path.children[pos].dimensions * spawn_proportional_offset * insert  # multiplying by insert flips the offset (since insert is either 1 or -1)
-    spawn_offset.rotate(base_rotation)
-    # Create new point, place it next to the CURRENTLY SELECTED point, and select it
-    new_point = make_point(anim_path.children[pos].location + spawn_offset)
-    new_point.rotation_euler = base_rotation    # Rotate the pointer so that it aligns with the previous one
-    new_point.parent = anim_path                # Parent it to the selected (for now the only) path
+    if after:
+        # Calculate offset proportionally to the dimensions of the mesh of the pointer (Control Point) object and in relation to the rotation of the PREVIOUS control point
+        base_rotation = anim_path.children[pos].rotation_euler
+        spawn_offset = anim_path.children[pos].dimensions * spawn_proportional_offset
+        spawn_offset.rotate(base_rotation)
+        # Create new point, place it next to the CURRENTLY SELECTED point, and select it
+        new_point = make_point(anim_path.children[pos].location + spawn_offset)
+        new_point.rotation_euler = base_rotation    # Rotate the pointer so that it aligns with the previous one
+        new_point.parent = anim_path                # Parent it to the selected (for now the only) path
+    else:
+        # Calculate offset proportionally to the dimensions of the mesh of the pointer (Control Point) object and in relation to the rotation of the PREVIOUS control point
+        base_rotation = anim_path.children[pos+1].rotation_euler
+        spawn_offset = anim_path.children[pos+1].dimensions * spawn_proportional_offset * -1  # flipping the offset to insert the point behind the selected one
+        spawn_offset.rotate(base_rotation)
+        # Create new point, place it next to the CURRENTLY SELECTED point, and select it
+        new_point = make_point(anim_path.children[pos+1].location + spawn_offset)
+        new_point.rotation_euler = base_rotation    # Rotate the pointer so that it aligns with the previous one
+        new_point.parent = anim_path                # Parent it to the selected (for now the only) path
 
     print("Number of Control Points " + str(len(anim_path["Control Points"])))
     if len(anim_path["Control Points"]) > 0:
@@ -327,7 +335,8 @@ def add_point(anim_path, pos=-1, after=True):
         control_points.append(new_point)
         anim_path["Control Points"] = control_points
         if pos >= 0:
-            pos = pos if after else (pos - 1)
+            #pos = pos if after or (not after and pos==0) else (pos - 1)
+            #print("new point at pos " + str(pos))
             # If the point should be inserted at a specific position
             # Move it to that position and re-shuffle the oder points accordingly
             move_point(new_point, pos)
@@ -373,7 +382,6 @@ def get_pos_name(pos):
 
 # Function to move a Control Point in the Control Path, given the point to move and the position it should take up
 def move_point(point, new_pos):
-    # If Proportional Editing (for object editing) is ENABLED, don't do anything
     if bpy.context.tool_settings.use_proportional_edit_objects:
         return
 

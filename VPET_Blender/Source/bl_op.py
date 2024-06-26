@@ -173,10 +173,10 @@ class AddPath(bpy.types.Operator):
 
 # Operator to add a new Animation Control Point
 # The execution is triggered by a button in the VPET Panel or by an entry in the Add Menu
-class AddWaypoint(bpy.types.Operator):
-    bl_idname = "object.add_control_point"
-    bl_label = "Create a new Control Point"
-    bl_description = 'Add a new Control Point to the (selected) Animation Path'
+class AddPointAfter(bpy.types.Operator):
+    bl_idname = "object.add_control_point_after"
+    bl_label = "Create a new Control Point after the selected"
+    bl_description = 'Add a new Control Point to the (selected) Animation Path after the one currently selected'
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
@@ -188,7 +188,37 @@ class AddWaypoint(bpy.types.Operator):
         # else:
         #     print("Select a Character Object to execute this functionality")
         print('Add Point START')
-        add_point(bpy.data.objects[AddPath.default_name])
+        anim_path = bpy.data.objects[AddPath.default_name]
+        new_point_index = anim_path["Control Points"].index(context.active_object) + 1  if (context.active_object in anim_path.children \
+                                                                                        and anim_path["Control Points"].index(context.active_object) < len(anim_path["Control Points"])-1) \
+                    else  -1
+
+        add_point(anim_path, pos=new_point_index, after=True)
+        return {'FINISHED'}
+    
+# Operator to add a new Animation Control Point
+# The execution is triggered by a button in the VPET Panel or by an entry in the Add Menu
+class AddPointBefore(bpy.types.Operator):
+    bl_idname = "object.add_control_point_before"
+    bl_label = "Create a new Control Point before the selected"
+    bl_description = 'Add a new Control Point to the (selected) Animation Path before the one currently selected'
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        #TODO: eventually make it contextual to the selection of a specific path
+        # if(context.active_object == "ARMATURE"):
+        #     print('Add Path START')
+        #     add_path(context.active_object)
+        #     #resendCurve()
+        # else:
+        #     print("Select a Character Object to execute this functionality")
+        print('Add Point START')
+        anim_path = bpy.data.objects[AddPath.default_name]
+        new_point_index = anim_path["Control Points"].index(context.active_object) if (context.active_object in anim_path.children \
+                                                                                   and anim_path["Control Points"].index(context.active_object) < len(anim_path["Control Points"])-1) \
+                    else  0
+
+        add_point(anim_path, pos=new_point_index, after=False)
         return {'FINISHED'}
     
 # Operator to manage the Properties of the Animation Control Points
@@ -302,7 +332,7 @@ class EvalCurve(bpy.types.Operator):
     
 class ToggleAutoEval(bpy.types.Operator):
     bl_idname = "object.toggle_auto_eval"
-    bl_label = "Disable Path Auto Update"
+    bl_label = "Enable Path Auto Update"
     bl_description = 'Enable/Disable the automatic re-calculation of the path'
 
     def execute(self, context):

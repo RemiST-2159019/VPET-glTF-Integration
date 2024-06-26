@@ -33,7 +33,7 @@ Filmakademie (research<at>filmakademie.de).
 
 import bpy
 
-from .bl_op import AddPath, AddWaypoint, EvalCurve, ToggleAutoEval
+from .bl_op import AddPath, AddPointAfter, AddPointBefore, EvalCurve, ToggleAutoEval
 
 ## Interface
 # 
@@ -84,10 +84,13 @@ class VPET_PT_Anim_Path_Panel(VPET_Panel, bpy.types.Panel):
         layout = self.layout
         row = layout.row()
         row.operator(AddPath.bl_idname, text='Add Control Path')
-        row.operator(AddWaypoint.bl_idname, text='Add New Waypoint')
         row.operator(EvalCurve.bl_idname, text='Evaluate Curve')
         row = layout.row()
-        row.operator(ToggleAutoEval.bl_idname, text=ToggleAutoEval.bl_label)
+        row.operator(AddPointAfter.bl_idname, text='New Point After')
+        row.operator(AddPointBefore.bl_idname, text='New Point Before')
+        if AddPath.default_name in bpy.data.objects:
+            row = layout.row()
+            row.operator(ToggleAutoEval.bl_idname, text=ToggleAutoEval.bl_label)
 
 class VPET_PT_Control_Points_Panel(VPET_Panel, bpy.types.Panel):
     bl_idname = "VPET_PT_control_points_panel"
@@ -134,6 +137,9 @@ class VPET_PT_Anim_Path_Menu(bpy.types.Menu):
         self.layout.operator(AddPath.bl_idname,
                              text="Animation Path",
                              icon='OUTLINER_DATA_CURVE')
-        self.layout.operator(AddWaypoint.bl_idname,
-                             text="Path Control Point",
+        self.layout.operator(AddPointAfter.bl_idname,
+                             text="Path Control Point After Selected",
+                             icon='RESTRICT_SELECT_OFF') # alternative option EMPTY_SINGLE_ARROW
+        self.layout.operator(AddPointBefore.bl_idname,
+                             text="Path Control Point Before Selected",
                              icon='RESTRICT_SELECT_OFF') # alternative option EMPTY_SINGLE_ARROW
