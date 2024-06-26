@@ -99,7 +99,14 @@ class VPET_PT_Control_Points_Panel(VPET_Panel, bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
 
-        if AddPath.default_name in bpy.data.objects:
+        # If the proportional editing is ENABLED, show warning message and disable control points property editing
+        print("Proportional Editing: " + str(bpy.context.tool_settings.use_proportional_edit_objects))
+        if bpy.context.tool_settings.use_proportional_edit_objects:
+            row = layout.row()
+            row.label(text="To use the Control Point Property Panel and the Path Auto Update")
+            row = layout.row()
+            row.label(text="disable Proportional Editing")
+        elif AddPath.default_name in bpy.data.objects:
             # Getting Control Points Properties
             cp_props = bpy.context.scene.control_point_settings
             anim_path = bpy.data.objects[AddPath.default_name]

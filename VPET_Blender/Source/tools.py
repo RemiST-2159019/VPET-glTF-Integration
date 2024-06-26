@@ -242,7 +242,7 @@ def add_path(character, path_name):
     # Check whether AnimPrev has a Control Points attribute
     if not "Auto Update" in anim_path:
         # If not, create it as a list of one element (i.e. the default control point)
-        anim_path["Auto Update"] = True
+        anim_path["Auto Update"] = False
     # Check whether AnimPrev has a Total Frames attribute
     if not "Total Frames" in anim_path:
         # If not, create it and give it the default value of 180
@@ -306,12 +306,13 @@ def make_point(spawn_location = (0, 0, 0)):
     
     return ptr_obj
 
-def add_point(anim_path, pos=-1):
+def add_point(anim_path, pos=-1, after=True):
+    insert = 1 if after else -1
     spawn_proportional_offset = mathutils.Vector((0, -1.5, 0))
     
     # Calculate offset proportionally to the dimensions of the mesh of the pointer (Control Point) object and in relation to the rotation of the PREVIOUS control point
     base_rotation = anim_path.children[pos].rotation_euler
-    spawn_offset = anim_path.children[pos].dimensions * spawn_proportional_offset
+    spawn_offset = anim_path.children[pos].dimensions * spawn_proportional_offset * insert  # multiplying by insert flips the offset (since insert is either 1 or -1)
     spawn_offset.rotate(base_rotation)
     # Create new point, place it next to the CURRENTLY SELECTED point, and select it
     new_point = make_point(anim_path.children[pos].location + spawn_offset)
@@ -326,6 +327,7 @@ def add_point(anim_path, pos=-1):
         control_points.append(new_point)
         anim_path["Control Points"] = control_points
         if pos >= 0:
+            pos = pos if after else (pos - 1)
             # If the point should be inserted at a specific position
             # Move it to that position and re-shuffle the oder points accordingly
             move_point(new_point, pos)
@@ -371,6 +373,10 @@ def get_pos_name(pos):
 
 # Function to move a Control Point in the Control Path, given the point to move and the position it should take up
 def move_point(point, new_pos):
+    # If Proportional Editing (for object editing) is ENABLED, don't do anything
+    if bpy.context.tool_settings.use_proportional_edit_objects:
+        return
+
     print("Moving " + point.name + " to position " + str(new_pos))
     # Get the current position of the active object
     point_pos = point.parent["Control Points"].index(point)

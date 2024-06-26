@@ -269,7 +269,7 @@ class EvalCurve(bpy.types.Operator):
             if not bpy.context.scene in child.users_scene:
                 print(child.name + " IS NOT in the scene")
                 bpy.data.objects.remove(child, do_unlink=True)
-                eval_curve(anim_path)
+        eval_curve(anim_path)
         
         for area in bpy.context.screen.areas:
             if area.type == 'PROPERTIES':
@@ -310,15 +310,17 @@ class ToggleAutoEval(bpy.types.Operator):
         if (AddPath.default_name in bpy.data.objects):
             anim_path = bpy.data.objects[AddPath.default_name]
             anim_path["Auto Update"] = not anim_path["Auto Update"]
+            bpy.context.tool_settings.use_proportional_edit_objects = not anim_path["Auto Update"]
+            bpy.context.tool_settings.use_proportional_edit = not anim_path["Auto Update"]
             # Forcing update visualisation of Property Panel
             for area in bpy.context.screen.areas:
                 if area.type == 'PROPERTIES':
                     area.tag_redraw()
 
-            if anim_path["Auto Update"]:
-                ToggleAutoEval.bl_label = "Disable Path Auto Update"
-            else:
+            if (not anim_path["Auto Update"]) or bpy.context.tool_settings.use_proportional_edit_objects:
                 ToggleAutoEval.bl_label = "Enable Path Auto Update"
+            else:
+                ToggleAutoEval.bl_label = "Disable Path Auto Update"
 
         return {'FINISHED'}
     
@@ -347,13 +349,22 @@ class AutoEval(bpy.types.Operator):
             eval_curve(self.anim_path)
         
         # If the active object is one of the children of AnimPath, listen to 'Shift + =' or 'Ctrl + +' Release events,
-        # this will trigger the addition of a new point to the animation path
+        # this will trigger the addition of a new point to the animation path, right after the currently selected points
         if  (context.active_object in bpy.data.objects[AddPath.default_name].children) and \
-            ((event.type == 'PLUS') or (event.type == 'NUMPAD_PLUS' and event.ctrl) or (event.type == 'EQUAL' and event.shift)) and \
+            ((event.type == 'PLUS'and not event.ctrl and not event.shift) or (event.type == 'NUMPAD_PLUS' and event.ctrl and not event.shift) or (event.type == 'EQUAL' and event.shift and not event.ctrl)) and \
             event.value == 'RELEASE':
             new_point_index = self.anim_path["Control Points"].index(context.active_object) + 1
             print("Insert new point at: " + str(new_point_index))
-            add_point(self.anim_path, new_point_index)
+            add_point(self.anim_path, pos=new_point_index, after=True)
+
+        # If the active object is one of the children of AnimPath, listen to 'Ctrl + Shift + =' or 'Ctrl + Shift + +' Release events,
+        # this will trigger the addition of a new point to the animation path, right before the currently selected points
+        if  (context.active_object in bpy.data.objects[AddPath.default_name].children) and \
+            ((event.type == 'PLUS' and event.ctrl and event.shift) or (event.type == 'NUMPAD_PLUS' and event.ctrl and event.shift) or (event.type == 'EQUAL' and event.shift and event.ctrl)) and \
+            event.value == 'RELEASE':
+            new_point_index = self.anim_path["Control Points"].index(context.active_object) + 1
+            print("Insert new point at: " + str(new_point_index))
+            add_point(self.anim_path, pos=new_point_index, after=False)
 
         return {'PASS_THROUGH'}
     
