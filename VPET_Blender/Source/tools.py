@@ -310,20 +310,20 @@ def add_point(anim_path, pos=-1, after=True):
     spawn_proportional_offset = mathutils.Vector((0, -1.5, 0))
     if after:
         # Calculate offset proportionally to the dimensions of the mesh of the pointer (Control Point) object and in relation to the rotation of the PREVIOUS control point
-        base_rotation = anim_path.children[pos].rotation_euler
-        spawn_offset = anim_path.children[pos].dimensions * spawn_proportional_offset
+        base_rotation = anim_path["Control Points"][pos].rotation_euler
+        spawn_offset = anim_path["Control Points"][pos].dimensions * spawn_proportional_offset
         spawn_offset.rotate(base_rotation)
         # Create new point, place it next to the CURRENTLY SELECTED point, and select it
-        new_point = make_point(anim_path.children[pos].location + spawn_offset)
+        new_point = make_point(anim_path["Control Points"][pos].location + spawn_offset)
         new_point.rotation_euler = base_rotation    # Rotate the pointer so that it aligns with the previous one
         new_point.parent = anim_path                # Parent it to the selected (for now the only) path
     else:
         # Calculate offset proportionally to the dimensions of the mesh of the pointer (Control Point) object and in relation to the rotation of the PREVIOUS control point
-        base_rotation = anim_path.children[pos+1].rotation_euler
-        spawn_offset = anim_path.children[pos+1].dimensions * spawn_proportional_offset * -1  # flipping the offset to insert the point behind the selected one
+        base_rotation = anim_path["Control Points"][pos].rotation_euler
+        spawn_offset = anim_path["Control Points"][pos].dimensions * spawn_proportional_offset * -1  # flipping the offset to insert the point behind the selected one
         spawn_offset.rotate(base_rotation)
         # Create new point, place it next to the CURRENTLY SELECTED point, and select it
-        new_point = make_point(anim_path.children[pos+1].location + spawn_offset)
+        new_point = make_point(anim_path["Control Points"][pos].location + spawn_offset)
         new_point.rotation_euler = base_rotation    # Rotate the pointer so that it aligns with the previous one
         new_point.parent = anim_path                # Parent it to the selected (for now the only) path
 
@@ -335,11 +335,10 @@ def add_point(anim_path, pos=-1, after=True):
         control_points.append(new_point)
         anim_path["Control Points"] = control_points
         if pos >= 0:
-            #pos = pos if after or (not after and pos==0) else (pos - 1)
-            #print("new point at pos " + str(pos))
-            # If the point should be inserted at a specific position
-            # Move it to that position and re-shuffle the oder points accordingly
-            move_point(new_point, pos)
+            if after:
+                move_point(new_point, pos+1)
+            else:
+                move_point(new_point, pos)
     else:
         # If Control Points has no elements, delete the property and create it ex-novo
         del anim_path["Control Points"]
@@ -382,9 +381,6 @@ def get_pos_name(pos):
 
 # Function to move a Control Point in the Control Path, given the point to move and the position it should take up
 def move_point(point, new_pos):
-    if bpy.context.tool_settings.use_proportional_edit_objects:
-        return
-
     print("Moving " + point.name + " to position " + str(new_pos))
     # Get the current position of the active object
     point_pos = point.parent["Control Points"].index(point)
@@ -397,15 +393,15 @@ def move_point(point, new_pos):
         #for i in range(len(point.parent["Control Points"])):
         #    print(point.parent["Control Points"][i].name)
         for i in range(new_pos, point_pos+1):
-            #print("Control Point " + point.parent["Control Points"][i].name + " to position " + str(i+1))
+            print("Control Point " + point.parent["Control Points"][i].name + " to position " + str(i+1))
             if (i+1) < len(point.parent["Control Points"]):
                 point.parent["Control Points"][i+1].name = "tmp"
             point.parent["Control Points"][i].name = get_pos_name(i+1)
-            #for i in range(len(point.parent["Control Points"])):
-            #    print(point.parent["Control Points"][i].name)
+            for i in range(len(point.parent["Control Points"])):
+                print(point.parent["Control Points"][i].name)
         point.name = get_pos_name(new_pos)
-        #for i in range(len(point.parent["Control Points"])):
-        #    print(point.parent["Control Points"][i].name)
+        for i in range(len(point.parent["Control Points"])):
+            print(point.parent["Control Points"][i].name)
     if new_pos  > point_pos:
         # Move the elements before the new position backward by one and insert the active object at new_pos
         point.name = "tmp"

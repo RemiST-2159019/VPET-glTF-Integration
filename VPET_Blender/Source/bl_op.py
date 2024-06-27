@@ -167,8 +167,8 @@ class AddPath(bpy.types.Operator):
         # else:
         #     print("Select a Character Object to execute this functionality")
         print('Add Path START')
-        add_path(context.active_object, self.default_name)  # Call the function resposible of creating the animation path
-        bpy.ops.path.auto_eval('INVOKE_DEFAULT')            # Invoke Modal Operaton for automatically update the Animation Path in (almost) real-time
+        add_path(context.active_object, self.default_name)      # Call the function resposible of creating the animation path
+        bpy.ops.path.interaction_listener('INVOKE_DEFAULT')     # Invoke Modal Operaton for automatically update the Animation Path in (almost) real-time
         return {'FINISHED'}
 
 # Operator to add a new Animation Control Point
@@ -189,7 +189,7 @@ class AddPointAfter(bpy.types.Operator):
         #     print("Select a Character Object to execute this functionality")
         print('Add Point START')
         anim_path = bpy.data.objects[AddPath.default_name]
-        new_point_index = anim_path["Control Points"].index(context.active_object) + 1  if (context.active_object in anim_path.children \
+        new_point_index = anim_path["Control Points"].index(context.active_object)  if (context.active_object in anim_path["Control Points"] \
                                                                                         and anim_path["Control Points"].index(context.active_object) < len(anim_path["Control Points"])-1) \
                     else  -1
 
@@ -214,8 +214,8 @@ class AddPointBefore(bpy.types.Operator):
         #     print("Select a Character Object to execute this functionality")
         print('Add Point START')
         anim_path = bpy.data.objects[AddPath.default_name]
-        new_point_index = anim_path["Control Points"].index(context.active_object) if (context.active_object in anim_path.children \
-                                                                                   and anim_path["Control Points"].index(context.active_object) < len(anim_path["Control Points"])-1) \
+        new_point_index = anim_path["Control Points"].index(context.active_object) if (context.active_object in anim_path["Control Points"] \
+                                                                                   and anim_path["Control Points"].index(context.active_object) < len(anim_path["Control Points"])) \
                     else  0
 
         add_point(anim_path, pos=new_point_index, after=False)
@@ -251,6 +251,8 @@ class ControlPointProps(bpy.types.PropertyGroup):
             return
 
     def update_position(self, context):
+        if bpy.context.tool_settings.use_proportional_edit_objects:
+            return
         context.active_object["Position"] = self.position
         move_point(context.active_object, self.position)
         print("Update! " + str(self.position))
@@ -354,9 +356,10 @@ class ToggleAutoEval(bpy.types.Operator):
 
         return {'FINISHED'}
     
-class AutoEval(bpy.types.Operator):
-    bl_idname = "path.auto_eval"
-    bl_label = "Automatic Path Updating on Translate Operator"
+class InteractionListener(bpy.types.Operator):
+    bl_idname = "path.interaction_listener"
+    bl_label = "Interaction Listener"
+    bl_description = "Listening to Interaction Events on the Animation Path Object and Sub-Objects"
 
     def __init__(self):
         print("Start")
@@ -383,18 +386,24 @@ class AutoEval(bpy.types.Operator):
         if  (context.active_object in bpy.data.objects[AddPath.default_name].children) and \
             ((event.type == 'PLUS'and not event.ctrl and not event.shift) or (event.type == 'NUMPAD_PLUS' and event.ctrl and not event.shift) or (event.type == 'EQUAL' and event.shift and not event.ctrl)) and \
             event.value == 'RELEASE':
-            new_point_index = self.anim_path["Control Points"].index(context.active_object) + 1
-            print("Insert new point at: " + str(new_point_index))
-            add_point(self.anim_path, pos=new_point_index, after=True)
+            # new_point_index = self.anim_path["Control Points"].index(context.active_object) + 1
+            # print("Insert new point at: " + str(new_point_index))
+            # add_point(self.anim_path, pos=new_point_index, after=True)
+            bpy.ops.object.add_control_point_after()
 
         # If the active object is one of the children of AnimPath, listen to 'Ctrl + Shift + =' or 'Ctrl + Shift + +' Release events,
         # this will trigger the addition of a new point to the animation path, right before the currently selected points
         if  (context.active_object in bpy.data.objects[AddPath.default_name].children) and \
             ((event.type == 'PLUS' and event.ctrl and event.shift) or (event.type == 'NUMPAD_PLUS' and event.ctrl and event.shift) or (event.type == 'EQUAL' and event.shift and event.ctrl)) and \
             event.value == 'RELEASE':
-            new_point_index = self.anim_path["Control Points"].index(context.active_object) + 1
-            print("Insert new point at: " + str(new_point_index))
-            add_point(self.anim_path, pos=new_point_index, after=False)
+            # new_point_index = self.anim_path["Control Points"].index(context.active_object) + 1
+            # print("Insert new point at: " + str(new_point_index))
+            # add_point(self.anim_path, pos=new_point_index, after=False)
+            bpy.ops.object.add_control_point_before()
+
+        # If the User is trying to get into edit mode while selecting a pointer object redirect them to EDIT_CURVE mode while selecting the corresponding Curve Point
+        if context.mode == 'EDIT_OBJECT' and context.active_object.parent == self.anim_path:
+            pointer_idx = self.anim_path["Control Points"].index(context.active_object)
 
         return {'PASS_THROUGH'}
     

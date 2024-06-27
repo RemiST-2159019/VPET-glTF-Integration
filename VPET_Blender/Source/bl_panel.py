@@ -82,15 +82,21 @@ class VPET_PT_Anim_Path_Panel(VPET_Panel, bpy.types.Panel):
 
     def draw(self, context):
         layout = self.layout
-        row = layout.row()
-        row.operator(AddPath.bl_idname, text='Add Control Path')
-        row.operator(EvalCurve.bl_idname, text='Evaluate Curve')
-        row = layout.row()
-        row.operator(AddPointAfter.bl_idname, text='New Point After')
-        row.operator(AddPointBefore.bl_idname, text='New Point Before')
-        if AddPath.default_name in bpy.data.objects:
+
+        if bpy.context.mode == 'EDIT_CURVE':
+            #if the user is edidting the points of the bezier spline, disable Control Point features and display message
             row = layout.row()
-            row.operator(ToggleAutoEval.bl_idname, text=ToggleAutoEval.bl_label)
+            row.label(text="Feature not available in Edit Curve Mode")
+        else:
+            row = layout.row()
+            row.operator(AddPath.bl_idname, text='Add Control Path')
+            row.operator(EvalCurve.bl_idname, text='Evaluate Curve')
+            row = layout.row()
+            row.operator(AddPointAfter.bl_idname, text='New Point After')
+            row.operator(AddPointBefore.bl_idname, text='New Point Before')
+            if AddPath.default_name in bpy.data.objects:
+                row = layout.row()
+                row.operator(ToggleAutoEval.bl_idname, text=ToggleAutoEval.bl_label)
 
 class VPET_PT_Control_Points_Panel(VPET_Panel, bpy.types.Panel):
     bl_idname = "VPET_PT_control_points_panel"
@@ -103,12 +109,16 @@ class VPET_PT_Control_Points_Panel(VPET_Panel, bpy.types.Panel):
         layout = self.layout
 
         # If the proportional editing is ENABLED, show warning message and disable control points property editing
-        print("Proportional Editing: " + str(bpy.context.tool_settings.use_proportional_edit_objects))
-        if bpy.context.tool_settings.use_proportional_edit_objects:
+        if bpy.context.mode == 'EDIT_CURVE':
+            #if the user is edidting the points of the bezier spline, disable Control Point features and display message
+            row = layout.row()
+            row.label(text="Feature not available in Edit Curve Mode")
+        elif bpy.context.tool_settings.use_proportional_edit_objects:
+            # If the proportional editing is ENABLED, show warning message and disable control points property editing
             row = layout.row()
             row.label(text="To use the Control Point Property Panel and the Path Auto Update")
             row = layout.row()
-            row.label(text="disable Proportional Editing")
+            row.label(text="Disable Proportional Editing")
         elif AddPath.default_name in bpy.data.objects:
             # Getting Control Points Properties
             cp_props = bpy.context.scene.control_point_settings
@@ -134,12 +144,13 @@ class VPET_PT_Anim_Path_Menu(bpy.types.Menu):
     bl_idname = "OBJECT_MT_custom_spline_menu"
 
     def draw(self, context):
-        self.layout.operator(AddPath.bl_idname,
-                             text="Animation Path",
-                             icon='OUTLINER_DATA_CURVE')
-        self.layout.operator(AddPointAfter.bl_idname,
-                             text="Path Control Point After Selected",
-                             icon='RESTRICT_SELECT_OFF') # alternative option EMPTY_SINGLE_ARROW
-        self.layout.operator(AddPointBefore.bl_idname,
-                             text="Path Control Point Before Selected",
-                             icon='RESTRICT_SELECT_OFF') # alternative option EMPTY_SINGLE_ARROW
+        if bpy.context.mode == 'OBJECT':
+            self.layout.operator(AddPath.bl_idname,
+                                 text="Animation Path",
+                                 icon='OUTLINER_DATA_CURVE')
+            self.layout.operator(AddPointAfter.bl_idname,
+                                 text="Path Control Point After Selected",
+                                 icon='RESTRICT_SELECT_OFF') # alternative option EMPTY_SINGLE_ARROW
+            self.layout.operator(AddPointBefore.bl_idname,
+                                 text="Path Control Point Before Selected",
+                                 icon='RESTRICT_SELECT_OFF') # alternative option EMPTY_SINGLE_ARROW
