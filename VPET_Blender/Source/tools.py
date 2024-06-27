@@ -242,7 +242,7 @@ def add_path(character, path_name):
     # Check whether AnimPrev has a Control Points attribute
     if not "Auto Update" in anim_path:
         # If not, create it as a list of one element (i.e. the default control point)
-        anim_path["Auto Update"] = True
+        anim_path["Auto Update"] = False
     # Check whether AnimPrev has a Total Frames attribute
     if not "Total Frames" in anim_path:
         # If not, create it and give it the default value of 180
@@ -255,6 +255,10 @@ def add_path(character, path_name):
         '''TODO check this out bpy.ops.wm.properties_edit(data_path="object", property_name="Total Frames", property_type='INT', is_overridable_library=False, description="", use_soft_limits=False, default_int=(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), min_int=0, max_int=2147483647, soft_min_int=-2147483648, soft_max_int=2147483647, step_int=1, subtype='NONE', eval_string="180")
 '''
     bpy.context.space_data.overlay.show_relationship_lines = False  # Disabling Relationship Lines to declutter scene view
+
+    # Select and set as active the new point
+    point_zero.select_set(True)
+    bpy.context.view_layer.objects.active = point_zero
 
     
     #? We could allow multiple paths in the scene (for now only one for simplifying testing)
@@ -290,7 +294,9 @@ def make_point(spawn_location = (0, 0, 0)):
     
     # Adding custom property "Frame" and "Style Label"
     ptr_obj["Frame"] = 0
-    ptr_obj["Style Label"] = "Walking"
+    ptr_obj["Ease In"] = 0
+    ptr_obj["Ease Out"] = 0
+    ptr_obj["Style"] = "Walking"
 
     # Customise shading option to highlight
     bpy.context.space_data.shading.wireframe_color_type = 'OBJECT'
@@ -300,28 +306,43 @@ def make_point(spawn_location = (0, 0, 0)):
     
     return ptr_obj
 
-def add_point(anim_path, pos=-1):
-    # Calculate offset proportionally to the dimensions of the mesh of the pointer (Control Point) object and in relation to the rotation of the previous control point
+def add_point(anim_path, pos=-1, after=True):
     spawn_proportional_offset = mathutils.Vector((0, -1.5, 0))
-    base_rotation = anim_path.children[-1].rotation_euler
-    spawn_offset = anim_path.children[-1].dimensions * spawn_proportional_offset
-    spawn_offset.rotate(base_rotation)
-    
-    # Create new point, place it next to the latest created point, and select it
-    new_point = make_point(anim_path.children[-1].location + spawn_offset)
-    new_point.rotation_euler = base_rotation    # Rotate the pointer so that it aligns with the previous one
-    new_point.parent = anim_path                # Parent it to the selected (for now the only) path
-
-    # Insert it to the list of Control Points of that path
-    # By default pos=-1, so the element is appended to the list
-    if len(anim_path["Control Points"]) > 0:
-        control_points = anim_path["Control Points"]
-        control_points.insert(pos, new_point)
-        anim_path["Control Points"] = control_points
+    if after:
+        # Calculate offset proportionally to the dimensions of the mesh of the pointer (Control Point) object and in relation to the rotation of the PREVIOUS control point
+        base_rotation = anim_path["Control Points"][pos].rotation_euler
+        spawn_offset = anim_path["Control Points"][pos].dimensions * spawn_proportional_offset
+        spawn_offset.rotate(base_rotation)
+        # Create new point, place it next to the CURRENTLY SELECTED point, and select it
+        new_point = make_point(anim_path["Control Points"][pos].location + spawn_offset)
+        new_point.rotation_euler = base_rotation    # Rotate the pointer so that it aligns with the previous one
+        new_point.parent = anim_path                # Parent it to the selected (for now the only) path
     else:
+        # Calculate offset proportionally to the dimensions of the mesh of the pointer (Control Point) object and in relation to the rotation of the PREVIOUS control point
+        base_rotation = anim_path["Control Points"][pos].rotation_euler
+        spawn_offset = anim_path["Control Points"][pos].dimensions * spawn_proportional_offset * -1  # flipping the offset to insert the point behind the selected one
+        spawn_offset.rotate(base_rotation)
+        # Create new point, place it next to the CURRENTLY SELECTED point, and select it
+        new_point = make_point(anim_path["Control Points"][pos].location + spawn_offset)
+        new_point.rotation_euler = base_rotation    # Rotate the pointer so that it aligns with the previous one
+        new_point.parent = anim_path                # Parent it to the selected (for now the only) path
+
+    print("Number of Control Points " + str(len(anim_path["Control Points"])))
+    if len(anim_path["Control Points"]) > 0:
+        # If Control Path is already populated
+        # Append it to the list of Control Points of that path
+        control_points = anim_path["Control Points"]
+        control_points.append(new_point)
+        anim_path["Control Points"] = control_points
+        if pos >= 0:
+            if after:
+                move_point(new_point, pos+1)
+            else:
+                move_point(new_point, pos)
+    else:
+        # If Control Points has no elements, delete the property and create it ex-novo
         del anim_path["Control Points"]
         anim_path["Control Points"] = [new_point]
-    #TODO: if pos>=0 rename and sort anim_path.children
 
     for area in bpy.context.screen.areas:
         if area.type == 'PROPERTIES':
@@ -331,8 +352,6 @@ def add_point(anim_path, pos=-1):
     for obj in bpy.context.selected_objects:
         obj.select_set(False)
 
-    new_point.select_set(True)
-
     # Checking list of Control Points
     print("Control Points:" + str(anim_path["Control Points"]))
 
@@ -340,18 +359,80 @@ def add_point(anim_path, pos=-1):
     if anim_path["Auto Update"]:
         eval_curve(anim_path)
 
+    # Select and set as active the new point
+    new_point.select_set(True)
+    bpy.context.view_layer.objects.active = new_point
+
+# Function that builds the name of a Control Point object given the position that it should take up in the Control Path
+def get_pos_name(pos):
+    suffix = ""
+    if pos < 0:
+        print("move_point doesn't take negative positions")
+        return
+    elif pos == 0:
+        suffix = ""
+    elif pos < 10:
+        suffix = (".00" + str(pos))
+    elif pos < 100:
+        suffix = (".0" + str(pos))
+    elif pos < 1000:
+        suffix = ("." + str(pos))
+    return "Pointer" + suffix
+
+# Function to move a Control Point in the Control Path, given the point to move and the position it should take up
+def move_point(point, new_pos):
+    print("Moving " + point.name + " to position " + str(new_pos))
+    # Get the current position of the active object
+    point_pos = point.parent["Control Points"].index(point)
+    if new_pos == point_pos:
+        # Just do a simple pass removing potential gaps in the numbering (useful after deletions)
+        for i in range(len(point.parent["Control Points"])):
+            point.parent["Control Points"][i].name = get_pos_name(i)
+    if new_pos <  point_pos:
+        # Move the elements after the new position forward by one and insert the active object at new_pos
+        #for i in range(len(point.parent["Control Points"])):
+        #    print(point.parent["Control Points"][i].name)
+        for i in range(new_pos, point_pos+1):
+            print("Control Point " + point.parent["Control Points"][i].name + " to position " + str(i+1))
+            if (i+1) < len(point.parent["Control Points"]):
+                point.parent["Control Points"][i+1].name = "tmp"
+            point.parent["Control Points"][i].name = get_pos_name(i+1)
+            for i in range(len(point.parent["Control Points"])):
+                print(point.parent["Control Points"][i].name)
+        point.name = get_pos_name(new_pos)
+        for i in range(len(point.parent["Control Points"])):
+            print(point.parent["Control Points"][i].name)
+    if new_pos  > point_pos:
+        # Move the elements before the new position backward by one and insert the active object at new_pos
+        point.name = "tmp"
+        #for i in range(len(point.parent["Control Points"])):
+        #    print(point.parent["Control Points"][i].name)
+        for i in range(point_pos+1, new_pos+1):
+            #print("Control Point " + point.parent["Control Points"][i].name + " to position " + str(i-1))
+            point.parent["Control Points"][i].name = get_pos_name(i-1)
+            #for i in range(len(point.parent["Control Points"])):
+            #    print(point.parent["Control Points"][i].name)
+        point.name = get_pos_name(new_pos)
+        #for i in range(len(point.parent["Control Points"])):
+        #    print(point.parent["Control Points"][i].name)
+    # Evaluate the curve, given the new ordrering of the Control Points
+    eval_curve(point.parent)
+
 def eval_curve(anim_path):
     # Deselect all selected objects
     for obj in bpy.context.selected_objects:
         obj.select_set(False)
 
+    #TODO: move this block (417 to 425 to separate function)
     # Check the children of the Animation Preview (or corresponding character)
     control_points = []
+    cp_names = []   # Helper list containing the names of the control points left in the scene
     for child in anim_path.children:
         if re.search(r'Control Path', child.name):
             bpy.data.objects.remove(child, do_unlink=True)
         else:
             control_points.append(child)
+            cp_names.append(child.name)
     
     #print("Number of Control Points for the spline " + str(len(control_points)))
     anim_path["Control Points"] = control_points
@@ -384,13 +465,15 @@ def draw_pointer_numbers_callback(self, context):
     if "AnimPath" in bpy.context.scene.objects:
         anim_path = bpy.context.scene.objects["AnimPath"]
         # for every control point of the animation path
-        for i, cp in enumerate(anim_path["Control Points"]):
-            # If the Control POint is not hidden in the viewport
-            if not (anim_path["Control Points"][i] == None or anim_path["Control Points"][i].hide_get()):
+        for i in range(len(anim_path["Control Points"])):
+            cp = anim_path["Control Points"][i]
+            # cp_props = anim_path["Control Points Properties"][i]
+            # If the Control Point is not hidden in the viewport
+            if not (cp == None or cp.hide_get()):
                 # Getting 3D position of the control point (taking in account a 3D offset, so that the label can follow the mesh orientation)
                 offset_3d = mathutils.Vector((-0.1, 0, 0.1))
-                offset_3d.rotate(anim_path["Control Points"][i].rotation_euler)
-                anchor_3d_pos = anim_path["Control Points"][i].location + offset_3d
+                offset_3d.rotate(cp.rotation_euler)
+                anchor_3d_pos = cp.location + offset_3d
                 # Getting the corresponding 2D viewport location of the 3D location of the control point
                 txt_x, txt_y = bpy_extras.view3d_utils.location_3d_to_region_2d(
                     bpy.context.region,

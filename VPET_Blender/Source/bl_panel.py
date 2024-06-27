@@ -33,16 +33,18 @@ Filmakademie (research<at>filmakademie.de).
 
 import bpy
 
-from .bl_op import AddPath, AddWaypoint, EvalCurve, ToggleAutoEval
+from .bl_op import AddPath, AddPointAfter, AddPointBefore, EvalCurve, ToggleAutoEval
 
 ## Interface
-#  
-class VPET_PT_Panel(bpy.types.Panel):
-    bl_idname = "VPET_PT_PANEL"
-    bl_label = "VPET"
+# 
+class VPET_Panel:
     bl_category = "VPET Addon"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
+
+class VPET_PT_Panel(VPET_Panel, bpy.types.Panel):
+    bl_idname = "VPET_PT_PANEL"
+    bl_label = "VPET"
     
     def draw(self, context):
         layout = self.layout
@@ -56,13 +58,6 @@ class VPET_PT_Panel(bpy.types.Panel):
         row.operator('object.setup_character', text='Setup Character for VPET')
         row.operator('object.make_obj_editable', text='Make selected Editable')
         row.operator('object.parent_to_root', text='Parent TO Root')
-
-        row = layout.row()
-        row.operator(AddPath.bl_idname, text='Add Control Path')
-        row.operator(AddWaypoint.bl_idname, text='Add New Waypoint')
-        row.operator(EvalCurve.bl_idname, text='Evaluate Curve')            #TODO: to be triggered when deselecting any of the Control Points
-        row = layout.row()
-        row.operator(ToggleAutoEval.bl_idname, text=ToggleAutoEval.bl_label)
         
         row = layout.row()
         row.operator('object.zmq_distribute', text = "Do Distribute")
@@ -81,14 +76,81 @@ class VPET_PT_Panel(bpy.types.Panel):
         row = layout.row()
         row.operator('object.rpc', text = "RPC CHANGE LATER")
 
-class AnimPathMenu(bpy.types.Menu):
+class VPET_PT_Anim_Path_Panel(VPET_Panel, bpy.types.Panel):
+    bl_idname = "VPET_PT_ANIM_PATH_PANEL"
+    bl_label = "Animation Path"
+
+    def draw(self, context):
+        layout = self.layout
+
+        if bpy.context.mode == 'EDIT_CURVE':
+            #if the user is edidting the points of the bezier spline, disable Control Point features and display message
+            row = layout.row()
+            row.label(text="Feature not available in Edit Curve Mode")
+        else:
+            row = layout.row()
+            row.operator(AddPath.bl_idname, text='Add Control Path')
+            row.operator(EvalCurve.bl_idname, text='Evaluate Curve')
+            row = layout.row()
+            row.operator(AddPointAfter.bl_idname, text='New Point After')
+            row.operator(AddPointBefore.bl_idname, text='New Point Before')
+            if AddPath.default_name in bpy.data.objects:
+                row = layout.row()
+                row.operator(ToggleAutoEval.bl_idname, text=ToggleAutoEval.bl_label)
+
+class VPET_PT_Control_Points_Panel(VPET_Panel, bpy.types.Panel):
+    bl_idname = "VPET_PT_control_points_panel"
+    bl_label = "Control Points"
+
+    # By setting VPET_PT_Anim_Path_Panel as parent of Control_Points_Panel, this panel will be nested into its parent in the UI 
+    bl_parent_id = VPET_PT_Anim_Path_Panel.bl_idname
+
+    def draw(self, context):
+        layout = self.layout
+
+        # If the proportional editing is ENABLED, show warning message and disable control points property editing
+        if bpy.context.mode == 'EDIT_CURVE':
+            #if the user is edidting the points of the bezier spline, disable Control Point features and display message
+            row = layout.row()
+            row.label(text="Feature not available in Edit Curve Mode")
+        elif bpy.context.tool_settings.use_proportional_edit_objects:
+            # If the proportional editing is ENABLED, show warning message and disable control points property editing
+            row = layout.row()
+            row.label(text="To use the Control Point Property Panel and the Path Auto Update")
+            row = layout.row()
+            row.label(text="Disable Proportional Editing")
+        elif AddPath.default_name in bpy.data.objects:
+            # Getting Control Points Properties
+            cp_props = bpy.context.scene.control_point_settings
+            anim_path = bpy.data.objects[AddPath.default_name]
+            # Setting the owner of the data, if it exists
+            for i in range(len(anim_path["Control Points"])):
+                cp = anim_path["Control Points"][i]
+                row = layout.row()
+                # Highlight the selected Control Point by marking the panel entry with a dot
+                if (not context.active_object == None) and (context.active_object.name == cp.name):
+                    row.label(text=cp.name) # eventually also icon='DOT'
+                    row.prop(cp_props, "position", slider=False)
+                    row.prop(cp_props, "frame", slider=False)
+                    row.prop(cp_props, "ease_in", slider=True)
+                    row.prop(cp_props, "ease_out", slider=True)
+                    row.prop_menu_enum(cp_props, "style")
+                else:
+                    row.label(text=cp.name)
+                
+
+class VPET_PT_Anim_Path_Menu(bpy.types.Menu):
     bl_label = "Animation Path"	   
     bl_idname = "OBJECT_MT_custom_spline_menu"
 
     def draw(self, context):
-        self.layout.operator(AddPath.bl_idname,
-                             text="Animation Path",
-                             icon='OUTLINER_DATA_CURVE')
-        self.layout.operator(AddWaypoint.bl_idname,
-                             text="Path Control Point",
-                             icon='RESTRICT_SELECT_OFF') # alternative option EMPTY_SINGLE_ARROW
+        if bpy.context.mode == 'OBJECT':
+            self.layout.operator(AddPath.bl_idname,
+                                 text="Animation Path",
+                                 icon='OUTLINER_DATA_CURVE')
+            self.layout.operator(AddPointAfter.bl_idname,
+                                 text="Path Control Point After Selected",
+                                 icon='RESTRICT_SELECT_OFF') # alternative option EMPTY_SINGLE_ARROW
+            self.layout.operator(AddPointBefore.bl_idname,
+                                 text="Path Control Point Before Selected",
+                                 icon='RESTRICT_SELECT_OFF') # alternative option EMPTY_SINGLE_ARROW
