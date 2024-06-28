@@ -37,7 +37,7 @@ import re
 
 from bpy.types import Context
 from .serverAdapter import set_up_thread, close_socket_d, close_socket_s, close_socket_c, close_socket_u
-from .tools import cleanUp, installZmq, checkZMQ, setupCollections, parent_to_root, add_path, add_point, move_point, eval_curve
+from .tools import cleanUp, installZmq, checkZMQ, setupCollections, parent_to_root, add_path, add_point, move_point, eval_curve, path_points_check
 from .sceneDistribution import gatherSceneData, resendCurve
 from .GenerateSkeletonObj import process_armature
 
@@ -259,6 +259,7 @@ class ControlPointProps(bpy.types.PropertyGroup):
 
     def update_frame(self, context):
         # Set the property of the active control point to the new UI value
+        # TODO: update also following points keeping a constant delta to the previous ones
         context.active_object["Frame"] = self.frame
         print("Update! " + str(self.frame))
 
@@ -356,6 +357,27 @@ class ToggleAutoEval(bpy.types.Operator):
 
         return {'FINISHED'}
     
+class ControlPointSelect(bpy.types.Operator):
+    bl_idname = "object.control_point_select"
+    bl_label = ""
+    bl_description = 'Allows selecting a Control Point from a Panel in the VPET UI'
+
+    cp_name: bpy.props.StringProperty()
+
+    def execute(self, context):
+        for obj in bpy.data.objects:
+            obj.select_set(False)
+
+        if not self.cp_name in context.view_layer.objects:
+            bpy.data.objects.remove(bpy.data.objects[self.cp_name], do_unlink=True)
+            path_points_check(bpy.data.objects["AnimPath"])
+        else:
+            bpy.data.objects[self.cp_name].select_set(True)
+            #print("Click " + self.cp_name + " " + str(bpy.data.objects[self.cp_name].select_get()))
+            bpy.context.view_layer.objects.active = bpy.data.objects[self.cp_name]
+
+        return {'FINISHED'}
+    
 class InteractionListener(bpy.types.Operator):
     bl_idname = "path.interaction_listener"
     bl_label = "Interaction Listener"
@@ -372,6 +394,8 @@ class InteractionListener(bpy.types.Operator):
             if AddPath.default_name in bpy.data.objects:
                 if self.anim_path["Auto Update"]:
                     eval_curve(self.anim_path)
+                else:
+                    path_points_check(self.anim_path)
             else:
                 return {'FINISHED'}
 
