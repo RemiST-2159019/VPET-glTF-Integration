@@ -33,7 +33,7 @@ Filmakademie (research<at>filmakademie.de).
 
 import bpy
 
-from .bl_op import AddPath, AddPointAfter, AddPointBefore, EvalCurve, ToggleAutoEval
+from .bl_op import AddPath, AddPointAfter, AddPointBefore, EvalCurve, ToggleAutoEval, ControlPointSelect
 
 ## Interface
 # 
@@ -123,20 +123,44 @@ class VPET_PT_Control_Points_Panel(VPET_Panel, bpy.types.Panel):
             # Getting Control Points Properties
             cp_props = bpy.context.scene.control_point_settings
             anim_path = bpy.data.objects[AddPath.default_name]
+            grid = layout.grid_flow(row_major=True, columns=6, even_rows=True, even_columns=True, align=True)
+
+            title1 = grid.box(); title1.alert = True; title1.label(text="NAME")
+            title2 = grid.box(); title2.alert = True; title2.label(text="POSITION")
+            title3 = grid.box(); title3.alert = True; title3.label(text="FRAME")
+            title4 = grid.box(); title4.alert = True; title4.label(text="IN")
+            title5 = grid.box(); title5.alert = True; title5.label(text="OUT")
+            title6 = grid.box(); title6.alert = True; title6.label(text="STYLE")
+                
             # Setting the owner of the data, if it exists
-            for i in range(len(anim_path["Control Points"])):
+            cp_list_size = len(anim_path["Control Points"])
+            for i in range(cp_list_size):
                 cp = anim_path["Control Points"][i]
                 row = layout.row()
+
+                name_select = grid.box(); name_select.alignment = 'CENTER' # alignment does nothing. Buggy Blender.
+                name_select.operator(ControlPointSelect.bl_idname, text=cp.name).cp_name = cp.name
+                # TODO: try to make the name a button for selecting the contol point to edit
                 # Highlight the selected Control Point by marking the panel entry with a dot
                 if (not context.active_object == None) and (context.active_object.name == cp.name):
-                    row.label(text=cp.name) # eventually also icon='DOT'
-                    row.prop(cp_props, "position", slider=False)
-                    row.prop(cp_props, "frame", slider=False)
-                    row.prop(cp_props, "ease_in", slider=True)
-                    row.prop(cp_props, "ease_out", slider=True)
-                    row.prop_menu_enum(cp_props, "style")
+                    grid.prop(cp_props, property="position", text="", slider=False)
+                    grid.prop(cp_props, property="frame", text="", slider=False)
+                    grid.prop(cp_props, property="ease_in", text="", slider=True)
+                    grid.prop(cp_props, property="ease_out", text="", slider=True)
+                    grid.prop_menu_enum(data=cp_props, property="style", text=cp["Style"])
                 else:
-                    row.label(text=cp.name)
+                    postn = grid.box(); postn.label(text=str(i));           postn.alignment = 'CENTER' # alignment does nothing. Buggy Blender.
+                    frame = grid.box(); frame.label(text=str(cp["Frame"])); frame.alignment = 'CENTER' # alignment does nothing. Buggy Blender.
+                    # If a frame value is not valid (smaller than the previous or bigger than the following,
+                    # mark it as an alert
+                    if (  i > 0             and cp["Frame"] < anim_path["Control Points"][i-1]["Frame"])\
+                    or (i+1 < cp_list_size  and cp["Frame"] > anim_path["Control Points"][i+1]["Frame"]):
+                        frame.alert = True
+                    else:
+                        frame.alert = False
+                    e__in = grid.box(); e__in.label(text=str(cp["Ease In"]));   e__in.alignment = 'CENTER' # alignment does nothing. Buggy Blender.
+                    e_out = grid.box(); e_out.label(text=str(cp["Ease Out"]));  e_out.alignment = 'CENTER' # alignment does nothing. Buggy Blender.
+                    style = grid.box(); style.label(text=cp["Style"]);          style.alignment = 'CENTER' # alignment does nothing. Buggy Blender.
                 
 
 class VPET_PT_Anim_Path_Menu(bpy.types.Menu):

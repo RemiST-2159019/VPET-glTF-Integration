@@ -418,24 +418,31 @@ def move_point(point, new_pos):
     # Evaluate the curve, given the new ordrering of the Control Points
     eval_curve(point.parent)
 
-def eval_curve(anim_path):
-    # Deselect all selected objects
-    for obj in bpy.context.selected_objects:
-        obj.select_set(False)
-
-    #TODO: move this block (417 to 425 to separate function)
+def path_points_check(anim_path):
     # Check the children of the Animation Preview (or corresponding character)
     control_points = []
     cp_names = []   # Helper list containing the names of the control points left in the scene
     for child in anim_path.children:
         if re.search(r'Control Path', child.name):
             bpy.data.objects.remove(child, do_unlink=True)
+        elif not child.name in bpy.context.view_layer.objects:
+            bpy.data.objects.remove(child, do_unlink=True)
         else:
             control_points.append(child)
             cp_names.append(child.name)
     
-    #print("Number of Control Points for the spline " + str(len(control_points)))
     anim_path["Control Points"] = control_points
+
+def eval_curve(anim_path):
+    # Deselect all selected objects
+    for obj in bpy.context.selected_objects:
+        obj.select_set(False)
+
+    #TODO: move this block (417 to 425 to separate function)
+    
+    
+    #print("Number of Control Points for the spline " + str(len(control_points)))
+    path_points_check(anim_path)
 
     # Create Control Path from control_points elements
     bezier_curve_obj = bpy.data.curves.new('Control Path', type='CURVE')        # Create new Curve Object with name Control Path
