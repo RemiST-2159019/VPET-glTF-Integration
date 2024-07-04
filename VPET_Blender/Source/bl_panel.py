@@ -33,7 +33,7 @@ Filmakademie (research<at>filmakademie.de).
 
 import bpy
 
-from .bl_op import AddPath, AddPointAfter, AddPointBefore, EvalCurve, ToggleAutoEval, ControlPointSelect
+from .bl_op import AddPath, AddPointAfter, AddPointBefore, EvalCurve, ToggleAutoEval, ControlPointSelect, EditControlPointHandle
 
 ## Interface
 # 
@@ -86,17 +86,19 @@ class VPET_PT_Anim_Path_Panel(VPET_Panel, bpy.types.Panel):
         if bpy.context.mode == 'EDIT_CURVE':
             #if the user is edidting the points of the bezier spline, disable Control Point features and display message
             row = layout.row()
+            row.alert = True
             row.label(text="Feature not available in Edit Curve Mode")
         else:
             row = layout.row()
-            row.operator(AddPath.bl_idname, text='Add Control Path')
-            row.operator(EvalCurve.bl_idname, text='Evaluate Curve')
+            row.operator(AddPath.bl_idname, text=AddPath.bl_label)
+            row.operator(EvalCurve.bl_idname, text=EvalCurve.bl_label)
             row = layout.row()
-            row.operator(AddPointAfter.bl_idname, text='New Point After')
-            row.operator(AddPointBefore.bl_idname, text='New Point Before')
+            row.operator(AddPointAfter.bl_idname, text=AddPointAfter.bl_label)
+            row.operator(AddPointBefore.bl_idname, text=AddPointBefore.bl_label)
             if AddPath.default_name in bpy.data.objects:
                 row = layout.row()
                 row.operator(ToggleAutoEval.bl_idname, text=ToggleAutoEval.bl_label)
+                #row.operator(ToggleAutoEval.bl_idname, text=ToggleAutoEval.bl_label)
 
 class VPET_PT_Control_Points_Panel(VPET_Panel, bpy.types.Panel):
     bl_idname = "VPET_PT_control_points_panel"
@@ -161,6 +163,9 @@ class VPET_PT_Control_Points_Panel(VPET_Panel, bpy.types.Panel):
                     e__in = grid.box(); e__in.label(text=str(cp["Ease In"]));   e__in.alignment = 'CENTER' # alignment does nothing. Buggy Blender.
                     e_out = grid.box(); e_out.label(text=str(cp["Ease Out"]));  e_out.alignment = 'CENTER' # alignment does nothing. Buggy Blender.
                     style = grid.box(); style.label(text=cp["Style"]);          style.alignment = 'CENTER' # alignment does nothing. Buggy Blender.
+            
+            row = layout.row()
+            row.operator(EditControlPointHandle.bl_idname, text=EditControlPointHandle.bl_label)
                 
 
 class VPET_PT_Anim_Path_Menu(bpy.types.Menu):

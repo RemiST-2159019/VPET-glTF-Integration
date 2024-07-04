@@ -297,6 +297,10 @@ def make_point(spawn_location = (0, 0, 0)):
     ptr_obj["Ease In"] = 0
     ptr_obj["Ease Out"] = 0
     ptr_obj["Style"] = "Walking"
+    ptr_obj["Left Handle Type"]  = "AUTO"
+    ptr_obj["Right Handle Type"] = "AUTO"
+    ptr_obj["Left Handle"]  = mathutils.Vector()
+    ptr_obj["Right Handle"] = mathutils.Vector()
 
     # Customise shading option to highlight
     bpy.context.space_data.shading.wireframe_color_type = 'OBJECT'
@@ -438,9 +442,6 @@ def eval_curve(anim_path):
     for obj in bpy.context.selected_objects:
         obj.select_set(False)
 
-    #TODO: move this block (417 to 425 to separate function)
-    
-    
     #print("Number of Control Points for the spline " + str(len(control_points)))
     path_points_check(anim_path)
 
@@ -452,8 +453,11 @@ def eval_curve(anim_path):
     bezier_spline.bezier_points.add(len(anim_path["Control Points"])-1)         # Add points to the Spline to match the length of the control_points list
     for i, cp in enumerate(anim_path["Control Points"]):
         bezier_spline.bezier_points[i].co = cp.location                         # Assign the poistion of the elements in control_list to the Bézier Points
-        bezier_spline.bezier_points[i].handle_left_type = 'AUTO'                # Make the Bézier Points handles AUTO so that the resulting spline is smooth by default. The user will be able to modify them from blender UI
-        bezier_spline.bezier_points[i].handle_right_type = 'AUTO'
+        #TODO: use the Handle data saved in the Control Point
+        bezier_spline.bezier_points[i].handle_left_type  = cp["Left Handle Type"]     # TODO: UPDATE COMMENT -> Make the Bézier Points handles AUTO so that the resulting spline is smooth by default. The user will be able to modify them from blender UI
+        bezier_spline.bezier_points[i].handle_left = cp["Left Handle"]
+        bezier_spline.bezier_points[i].handle_right_type = cp["Right Handle Type"]
+        bezier_spline.bezier_points[i].handle_right = cp["Right Handle"]
 
     control_path = bpy.data.objects.new('Control Path', bezier_curve_obj)       # Create a new Control Path Object with the geometry data of the Bézier Curve
     control_path.parent = anim_path                                             # Make the Control Path a child of the Animation preview Object

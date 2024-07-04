@@ -34,6 +34,7 @@ Filmakademie (research<at>filmakademie.de).
 from typing import Annotated, Set
 import bpy
 import re
+from mathutils import Vector
 
 from bpy.types import Context
 from .serverAdapter import set_up_thread, close_socket_d, close_socket_s, close_socket_c, close_socket_u
@@ -175,7 +176,7 @@ class AddPath(bpy.types.Operator):
 # The execution is triggered by a button in the VPET Panel or by an entry in the Add Menu
 class AddPointAfter(bpy.types.Operator):
     bl_idname = "object.add_control_point_after"
-    bl_label = "Create a new Control Point after the selected"
+    bl_label = "Add Point After"
     bl_description = 'Add a new Control Point to the (selected) Animation Path after the one currently selected'
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -200,7 +201,7 @@ class AddPointAfter(bpy.types.Operator):
 # The execution is triggered by a button in the VPET Panel or by an entry in the Add Menu
 class AddPointBefore(bpy.types.Operator):
     bl_idname = "object.add_control_point_before"
-    bl_label = "Create a new Control Point before the selected"
+    bl_label = "New Point Before"
     bl_description = 'Add a new Control Point to the (selected) Animation Path before the one currently selected'
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -239,8 +240,13 @@ class ControlPointProps(bpy.types.PropertyGroup):
         else:
             return
         
+        if AddPath.default_name in bpy.data.objects:
+            anim_path = bpy.data.objects[AddPath.default_name]
+        else:
+            return
+
         # If a Path has been created in the scene and the selected object is a Control Point
-        if (not bpy.data.objects[AddPath.default_name] == None) and (re.search(r'Pointer', active_obj.name)):
+        if (not anim_path == None) and (re.search(r'Pointer', active_obj.name)):
             scene.control_point_settings.position = active_obj.parent["Control Points"].index(active_obj)
             scene.control_point_settings.frame = active_obj["Frame"]
             scene.control_point_settings.ease_in = active_obj["Ease In"]
@@ -291,12 +297,16 @@ class ControlPointProps(bpy.types.PropertyGroup):
 # The execution is triggered by a button in the VPET Panel or by an entry in the Add Menu
 class EvalCurve(bpy.types.Operator):
     bl_idname = "object.eval_curve"
-    bl_label = "Re-evaluate the curve"
+    bl_label = "Update Curve"
     bl_description = 'Recalculate the Control Path given the new configuration of the Control Points'
 
     def execute(self, context):
         print('Evaluate Curve START')
-        anim_path = bpy.data.objects[AddPath.default_name]
+        if AddPath.default_name in bpy.data.objects:
+            anim_path = bpy.data.objects[AddPath.default_name]
+        else:
+            return
+        
         # Check for deleted control points and evtl. do some cleanup before updating the curve 
         for child in anim_path.children:
             if not bpy.context.scene in child.users_scene:
@@ -311,7 +321,11 @@ class EvalCurve(bpy.types.Operator):
         return {'FINISHED'}
     
     def on_delete_update_handler(scene):
-        anim_path = bpy.data.objects[AddPath.default_name]
+        if AddPath.default_name in bpy.data.objects:
+            anim_path = bpy.data.objects[AddPath.default_name]
+        else:
+            return
+
         if anim_path["Auto Update"]:
             # Check for deleted control points and evtl. do some cleanup before updating the curve  
             for i, child in enumerate(anim_path.children):
@@ -344,7 +358,7 @@ class ToggleAutoEval(bpy.types.Operator):
             anim_path = bpy.data.objects[AddPath.default_name]
             anim_path["Auto Update"] = not anim_path["Auto Update"]
             bpy.context.tool_settings.use_proportional_edit_objects = not anim_path["Auto Update"]
-            bpy.context.tool_settings.use_proportional_edit = not anim_path["Auto Update"]
+            #bpy.context.tool_settings.use_proportional_edit = not anim_path["Auto Update"]
             # Forcing update visualisation of Property Panel
             for area in bpy.context.screen.areas:
                 if area.type == 'PROPERTIES':
@@ -360,7 +374,7 @@ class ToggleAutoEval(bpy.types.Operator):
 class ControlPointSelect(bpy.types.Operator):
     bl_idname = "object.control_point_select"
     bl_label = ""
-    bl_description = 'Allows selecting a Control Point from a Panel in the VPET UI'
+    bl_description = 'Select the signalled Control Point'
 
     cp_name: bpy.props.StringProperty()
 
@@ -373,9 +387,43 @@ class ControlPointSelect(bpy.types.Operator):
             path_points_check(bpy.data.objects["AnimPath"])
         else:
             bpy.data.objects[self.cp_name].select_set(True)
-            #print("Click " + self.cp_name + " " + str(bpy.data.objects[self.cp_name].select_get()))
             bpy.context.view_layer.objects.active = bpy.data.objects[self.cp_name]
+            bpy.ops.object.mode_set(mode='OBJECT', toggle=False)     # Force Object Mode
 
+        return {'FINISHED'}
+    
+class EditControlPointHandle(bpy.types.Operator):
+    bl_idname = "curve.edit_control_point_handle"
+    bl_label = "Edit Selected Control Point Handles"
+    bl_description = 'Edit the handles of the currently selected Control Point'
+
+    def execute(self, context):
+        anim_path = bpy.data.objects["AnimPath"]
+        eval_curve(anim_path)
+        if context.active_object in anim_path["Control Points"]:
+            ptr_idx = anim_path["Control Points"].index(context.active_object)
+            for obj in bpy.data.objects:
+                obj.select_set(False)
+
+            control_path_curve = anim_path.children[0]; control_path_curve.select_set(True) # Select Control Path Bezier Curve
+            context.view_layer.objects.active = control_path_curve
+            bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
+            bpy.ops.object.mode_set(mode='EDIT', toggle=False)
+            bpy.ops.curve.select_all(action='DESELECT')
+            print(control_path_curve.name + " " + control_path_curve.id_type)
+            control_path_curve.data.splines[0].bezier_points[ptr_idx].select_right_handle = True
+            control_path_curve.data.splines[0].bezier_points[ptr_idx].select_left_handle  = True
+
+        return {'FINISHED'}
+    
+class ResetControlPointHandles(bpy.types.Operator):
+    bl_idname = "curve.reset_handles"
+    bl_label = "Reset Selected Tangents"
+    bl_description = "Reset the tangents of the selected Control Points"
+
+    def execute(self, context):
+        
+        
         return {'FINISHED'}
     
 class InteractionListener(bpy.types.Operator):
@@ -388,6 +436,9 @@ class InteractionListener(bpy.types.Operator):
 
     def __del__(self):
         print("End")
+
+    def edit_handles(self, context):
+        self.layout.operator(EditControlPointHandle.bl_idname, text="Edit Handles", icon='HANDLE_ALIGNED')
 
     def modal(self, context, event):
         if (event.type == 'DEL' or event.type == 'X') and event.value == 'RELEASE':
@@ -410,9 +461,6 @@ class InteractionListener(bpy.types.Operator):
         if  (context.active_object in bpy.data.objects[AddPath.default_name].children) and \
             ((event.type == 'PLUS'and not event.ctrl and not event.shift) or (event.type == 'NUMPAD_PLUS' and event.ctrl and not event.shift) or (event.type == 'EQUAL' and event.shift and not event.ctrl)) and \
             event.value == 'RELEASE':
-            # new_point_index = self.anim_path["Control Points"].index(context.active_object) + 1
-            # print("Insert new point at: " + str(new_point_index))
-            # add_point(self.anim_path, pos=new_point_index, after=True)
             bpy.ops.object.add_control_point_after()
 
         # If the active object is one of the children of AnimPath, listen to 'Ctrl + Shift + =' or 'Ctrl + Shift + +' Release events,
@@ -420,14 +468,61 @@ class InteractionListener(bpy.types.Operator):
         if  (context.active_object in bpy.data.objects[AddPath.default_name].children) and \
             ((event.type == 'PLUS' and event.ctrl and event.shift) or (event.type == 'NUMPAD_PLUS' and event.ctrl and event.shift) or (event.type == 'EQUAL' and event.shift and event.ctrl)) and \
             event.value == 'RELEASE':
-            # new_point_index = self.anim_path["Control Points"].index(context.active_object) + 1
-            # print("Insert new point at: " + str(new_point_index))
-            # add_point(self.anim_path, pos=new_point_index, after=False)
             bpy.ops.object.add_control_point_before()
 
-        # If the User is trying to get into edit mode while selecting a pointer object redirect them to EDIT_CURVE mode while selecting the corresponding Curve Point
-        if context.mode == 'EDIT_OBJECT' and context.active_object.parent == self.anim_path:
-            pointer_idx = self.anim_path["Control Points"].index(context.active_object)
+        # If new_cp_location.w >= 0, it means that there is one point in the Bezier Spline that has been moved (i.e. it has a new location)
+        #  - therefore, we need to updater the location of the corresponding Control Point!
+        #  - The index of the affected Control Point is "saved" in the w component of new_cp_location, while xyz represent the location vector to be applied to the Control Point
+        #  - The update should take place when the editing of the Bezier Point is done (=> context.mode != 'EDIT')
+        if context.mode != 'EDIT' and self.new_cp_location.w >= 0:
+            self.anim_path["Control Points"][int(self.new_cp_location.w)].location = self.new_cp_location.xyz
+            self.new_cp_location.w = -1     # Setting the w to -1 in order to avoid overwriting the location multiple times
+
+        if context.active_object and context.active_object.mode == 'OBJECT' and context.active_object in self.anim_path["Control Points"]:
+            # If the User is selecting a Control Point, the Object Menu will also display the possibility of jumping directly into Handles Editing
+            #  - removing the entry before adding it again avoids duplicates
+            bpy.types.VIEW3D_MT_object.remove(InteractionListener.edit_handles)
+            bpy.types.VIEW3D_MT_object.append(InteractionListener.edit_handles)
+
+            # In order to make switching between modes smooth, it is necessary to be sure that all Pointer Objects are in "Object Mode" first
+            active_object = context.active_object                       # Save the current Active Object
+            for cp in self.anim_path["Control Points"]:                 # For every Pointer Object
+                bpy.context.view_layer.objects.active = cp              # Set it as the Active Object
+                bpy.ops.object.mode_set(mode='OBJECT', toggle=False)    # Set its mode to Object
+                cp.select_set(False)                                    # Deselect it, so that the operation is transparent to the user
+            bpy.context.view_layer.objects.active = active_object       # Reset the Active Object, to the saved one
+        else:
+            bpy.types.VIEW3D_MT_object.remove(InteractionListener.edit_handles)
+            
+        if context.active_object and context.active_object.mode == 'EDIT' and context.active_object in self.anim_path["Control Points"]:
+            # If the User is trying to get into edit mode while selecting a pointer object redirect them to EDIT_CURVE mode while selecting the corresponding Curve Point
+            #  - while in EDIT mode, blender will update the Left Handle and Right Handle properties od the Control Point object according to the User interactions with the Control Point
+            bpy.ops.curve.edit_control_point_handle()
+            
+        if context.active_object and context.active_object.mode == 'EDIT' and context.active_object.name == "Control Path":
+            # If the User is editing the Control Path Bezier Spline, save their moifications in the Properties of the various Control Points
+
+            selected_cp_idx = 0
+            path = context.active_object.data.splines[0]
+            # Get the index of the (first) control point that is currently being edited
+            for i in range(len(path.bezier_points)):
+                if  path.bezier_points[i].select_control_point  or\
+                    path.bezier_points[i].select_left_handle    or\
+                    path.bezier_points[i].select_right_handle:
+
+                    selected_cp_idx = i
+
+                    selected_curve_cp = path.bezier_points[selected_cp_idx]
+                    cp_list = bpy.data.objects[AddPath.default_name]["Control Points"]
+                    selected_cp = cp_list[selected_cp_idx]
+                    selected_cp["Left Handle Type"]  = selected_curve_cp.handle_left_type
+                    selected_cp["Right Handle Type"] = selected_curve_cp.handle_right_type
+                    selected_cp["Left Handle"]  = Vector(selected_curve_cp.handle_left)
+                    selected_cp["Right Handle"] = Vector(selected_curve_cp.handle_right)
+            
+
+            self.new_cp_location.xyz = selected_curve_cp.co
+            self.new_cp_location.w = selected_cp_idx
 
         return {'PASS_THROUGH'}
     
@@ -435,7 +530,7 @@ class InteractionListener(bpy.types.Operator):
         # Add the modal listener to the list of called handlers and save the Animation Path object
         context.window_manager.modal_handler_add(self)
         self.anim_path = bpy.data.objects[AddPath.default_name]
-        self.path_changed = False
+        self.new_cp_location = Vector((0, 0, 0, -1))
         return {'RUNNING_MODAL'}
     
 class SendRpcCall(bpy.types.Operator):
