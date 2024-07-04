@@ -474,9 +474,11 @@ class InteractionListener(bpy.types.Operator):
         #  - therefore, we need to updater the location of the corresponding Control Point!
         #  - The index of the affected Control Point is "saved" in the w component of new_cp_location, while xyz represent the location vector to be applied to the Control Point
         #  - The update should take place when the editing of the Bezier Point is done (=> context.mode != 'EDIT')
-        if context.mode != 'EDIT' and self.new_cp_location.w >= 0:
-            self.anim_path["Control Points"][int(self.new_cp_location.w)].location = self.new_cp_location.xyz
-            self.new_cp_location.w = -1     # Setting the w to -1 in order to avoid overwriting the location multiple times
+        if context.mode != 'EDIT':
+            for i, cp in enumerate(self.anim_path["Control Points"]):
+                if i < len(self.new_cp_locations) and self.new_cp_locations[i].w == 1:
+                    cp.location = self.new_cp_locations[i].xyz
+                    self.new_cp_locations[i].w = 0     # Setting the w to -1 in order to avoid overwriting the location multiple times
 
         if context.active_object and context.active_object.mode == 'OBJECT' and context.active_object in self.anim_path["Control Points"]:
             # If the User is selecting a Control Point, the Object Menu will also display the possibility of jumping directly into Handles Editing
@@ -504,25 +506,31 @@ class InteractionListener(bpy.types.Operator):
 
             selected_cp_idx = 0
             path = context.active_object.data.splines[0]
+            self.new_cp_locations = []
             # Get the index of the (first) control point that is currently being edited
             for i in range(len(path.bezier_points)):
+                if i >= len(self.new_cp_locations):
+                    self.new_cp_locations.append(Vector((0, 0, 0, 0)))
+
                 if  path.bezier_points[i].select_control_point  or\
                     path.bezier_points[i].select_left_handle    or\
                     path.bezier_points[i].select_right_handle:
 
-                    selected_cp_idx = i
+                    #selected_cp_idx = i
 
-                    selected_curve_cp = path.bezier_points[selected_cp_idx]
+                    selected_curve_cp = path.bezier_points[i]
                     cp_list = bpy.data.objects[AddPath.default_name]["Control Points"]
-                    selected_cp = cp_list[selected_cp_idx]
+                    selected_cp = cp_list[i]
+
                     selected_cp["Left Handle Type"]  = selected_curve_cp.handle_left_type
                     selected_cp["Right Handle Type"] = selected_curve_cp.handle_right_type
                     selected_cp["Left Handle"]  = Vector(selected_curve_cp.handle_left)
                     selected_cp["Right Handle"] = Vector(selected_curve_cp.handle_right)
-            
 
-            self.new_cp_location.xyz = selected_curve_cp.co
-            self.new_cp_location.w = selected_cp_idx
+                    self.new_cp_locations[i].xyz = selected_curve_cp.co
+                    self.new_cp_locations[i].w = 1
+            
+            
 
         return {'PASS_THROUGH'}
     
@@ -530,7 +538,7 @@ class InteractionListener(bpy.types.Operator):
         # Add the modal listener to the list of called handlers and save the Animation Path object
         context.window_manager.modal_handler_add(self)
         self.anim_path = bpy.data.objects[AddPath.default_name]
-        self.new_cp_location = Vector((0, 0, 0, -1))
+        self.new_cp_locations = []
         return {'RUNNING_MODAL'}
     
 class SendRpcCall(bpy.types.Operator):
