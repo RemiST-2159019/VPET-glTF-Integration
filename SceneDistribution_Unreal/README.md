@@ -69,7 +69,7 @@ An example minimal scene is also provided for quick testing: [`VPET_DemoContent.
 
 ## Supported Platforms
 
-This plug-in was built against versions **4.26** and **5.1**
+This plug-in was built against versions **4.27.2** , **5.2.1** and **5.3**
 only under **Windows x64** platform.
 
 Further support will be available in the coming revisions.
