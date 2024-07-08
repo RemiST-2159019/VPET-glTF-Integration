@@ -304,7 +304,7 @@ For assisting this setup without having to navigate through the Details tab, the
 
 #### 1. Starting point
 
-Alternatively, one can use the [provided test scene](../../../raw/main/SceneDistribution_Unreal/VPET_DemoContent.zip) or test running the application with the scene you have [without further set-up](#operation-without-tags).
+Alternatively, one can use the [provided test scene](https://github.com/FilmakademieRnd/VPET/blob/VPET2.0/SceneDistribution_Unreal/VPET_DemoContent.zip) or test running the application with the scene you have [without further set-up](#operation-without-tags).
 
 [<sup>^ back</sup>](#basic-workflow)
 
