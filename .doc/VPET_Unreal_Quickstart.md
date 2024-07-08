@@ -136,7 +136,7 @@ Now, changes made on the client should also show up on the engine.
 
 ![Synchronizing scene](img/unreal_qsg/vpet_scenesynchronization.gif "Synchronizing scene")
 
-**Note:** The synchronization server should be restarted when you go back into edit mode and do modifications to your host scene.
+**Note:** DataHub.exe should be restarted when you go back into edit mode and do modifications to your host scene.
 
 
 ---
