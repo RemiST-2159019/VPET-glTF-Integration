@@ -78,15 +78,11 @@ Further support will be available in the coming revisions.
 ## Additional tools
 
 For synchronization between clients (tablets, phones...) and host (Unreal Engine),
-the side tool **SyncServer** is needed.
-
-Refer back to repository root for more information.
-
+the side tool [DataHub](https://github.com/FilmakademieRnd/VPET/tree/VPET2.0/DataHub) is needed.
 
 ## Dependencies
 
 Currently release includes needed pre-built libraries and should work out of the box.
-
 
 ## Network requirements
 
