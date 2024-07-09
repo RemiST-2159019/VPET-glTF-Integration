@@ -69,7 +69,7 @@ An example minimal scene is also provided for quick testing: [`VPET_DemoContent.
 
 ## Supported Platforms
 
-This plug-in was built against versions **4.26** and **5.1**
+This plug-in was built against versions **4.27.2** , **5.2.1** and **5.3**
 only under **Windows x64** platform.
 
 Further support will be available in the coming revisions.
@@ -78,15 +78,11 @@ Further support will be available in the coming revisions.
 ## Additional tools
 
 For synchronization between clients (tablets, phones...) and host (Unreal Engine),
-the side tool **SyncServer** is needed.
-
-Refer back to repository root for more information.
-
+the side tool [DataHub](https://github.com/FilmakademieRnd/VPET/tree/VPET2.0/DataHub) is needed.
 
 ## Dependencies
 
 Currently release includes needed pre-built libraries and should work out of the box.
-
 
 ## Network requirements
 

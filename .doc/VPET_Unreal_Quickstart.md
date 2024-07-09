@@ -118,23 +118,25 @@ For more information, refer to VPET's user guide. It is found under Docs, at our
 
 While the host can send the scene information to the tablet, an external application is needed for synchronizing changes between the client (or multiple clients) and the host server.
 
-The SyncServer for the current build (win x64) will be found where you downloaded the [VPET repository](https://github.com/FilmakademieRnd/VPET), under
+DataHub.exe will be found where you downloaded the [VPET repository](https://github.com/FilmakademieRnd/VPET), under
 
-`...\SynchronisationServer\install_win64`
+`...\DataHub`
 
-It requires command line arguments, so it should be launched from the command prompt (*cmd.exe*).
+Double-click on DataHub.exe and the command prompt (*cmd.exe*) will open.
 
 You can run the application by setting the **-ownIP** (case-sensitive) argument.
 
-`Server.exe -ownIP 111.222.333.444`
+`> -ownIP 111.222.333.444` (same IP used in Unreal in the VPETModule actor.)
 
-![VPET SyncServer command](img/unreal_qsg/vpet_syncserver.jpg "VPET SyncServer command")
+for a list of commands use -h
+
+![VPET SyncServer command](img/unreal_qsg/DataHub.jpg "VPET DataHub command")
 
 Now, changes made on the client should also show up on the engine.
 
 ![Synchronizing scene](img/unreal_qsg/vpet_scenesynchronization.gif "Synchronizing scene")
 
-**Note:** The synchronization server should be restarted when you go back into edit mode and do modifications to your host scene.
+**Note:** DataHub.exe should be restarted when you go back into edit mode and do modifications to your host scene.
 
 
 ---
@@ -302,7 +304,7 @@ For assisting this setup without having to navigate through the Details tab, the
 
 #### 1. Starting point
 
-Alternatively, one can use the [provided test scene](../../../raw/main/SceneDistribution_Unreal/VPET_DemoContent.zip) or test running the application with the scene you have [without further set-up](#operation-without-tags).
+Alternatively, one can use the [provided test scene](https://github.com/FilmakademieRnd/VPET/blob/VPET2.0/SceneDistribution_Unreal/VPET_DemoContent.zip) or test running the application with the scene you have [without further set-up](#operation-without-tags).
 
 [<sup>^ back</sup>](#basic-workflow)
 
