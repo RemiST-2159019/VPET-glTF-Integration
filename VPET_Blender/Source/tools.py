@@ -361,7 +361,7 @@ def add_point(anim_path, pos=-1, after=True):
 
     # Trigger Path Updating (if the functionality is enabled)
     if anim_path["Auto Update"]:
-        eval_curve(anim_path)
+        update_curve(anim_path)
 
     # Select and set as active the new point
     new_point.select_set(True)
@@ -394,7 +394,7 @@ def move_point(point, new_pos):
             point.parent["Control Points"][i].name = get_pos_name(i)
     if new_pos <  point_pos:
         # Move the elements after the new position forward by one and insert the active object at new_pos
-        #for i in range(len(point.parent["Control Points"])):
+        #for i in range(len(point.parent["Control Points"])):   #! Debug print
         #    print(point.parent["Control Points"][i].name)
         for i in range(new_pos, point_pos+1):
             print("Control Point " + point.parent["Control Points"][i].name + " to position " + str(i+1))
@@ -409,19 +409,20 @@ def move_point(point, new_pos):
     if new_pos  > point_pos:
         # Move the elements before the new position backward by one and insert the active object at new_pos
         point.name = "tmp"
-        #for i in range(len(point.parent["Control Points"])):
+        #for i in range(len(point.parent["Control Points"])):   #! Debug print
         #    print(point.parent["Control Points"][i].name)
         for i in range(point_pos+1, new_pos+1):
-            #print("Control Point " + point.parent["Control Points"][i].name + " to position " + str(i-1))
+            #print("Control Point " + point.parent["Control Points"][i].name + " to position " + str(i-1))  #! Debug print
             point.parent["Control Points"][i].name = get_pos_name(i-1)
-            #for i in range(len(point.parent["Control Points"])):
+            #for i in range(len(point.parent["Control Points"])):   #! Debug print
             #    print(point.parent["Control Points"][i].name)
         point.name = get_pos_name(new_pos)
-        #for i in range(len(point.parent["Control Points"])):
+        #for i in range(len(point.parent["Control Points"])):   #! Debug print
         #    print(point.parent["Control Points"][i].name)
     # Evaluate the curve, given the new ordrering of the Control Points
-    eval_curve(point.parent)
+    update_curve(point.parent)
 
+### Update the list of Control Points given the current scene status, and remove the Control Path, which is going to be updated
 def path_points_check(anim_path):
     # Check the children of the Animation Preview (or corresponding character)
     control_points = []
@@ -437,7 +438,8 @@ def path_points_check(anim_path):
     
     anim_path["Control Points"] = control_points
 
-def eval_curve(anim_path):
+### Update Curve takes care of updating the AnimPath representation according to the modifications made by the user using the blender UI
+def update_curve(anim_path):
     # Deselect all selected objects
     for obj in bpy.context.selected_objects:
         obj.select_set(False)
@@ -446,28 +448,25 @@ def eval_curve(anim_path):
     path_points_check(anim_path)
 
     # Create Control Path from control_points elements
-    bezier_curve_obj = bpy.data.curves.new('Control Path', type='CURVE')        # Create new Curve Object with name Control Path
-    bezier_curve_obj.dimensions = '2D'                                          # The Curve Object is a 2D curve
+    bezier_curve_obj = bpy.data.curves.new('Control Path', type='CURVE')            # Create new Curve Object with name Control Path
+    bezier_curve_obj.dimensions = '2D'                                              # The Curve Object is a 2D curve
 
-    bezier_spline = bezier_curve_obj.splines.new('BEZIER')                      # Create new Bezier Spline "Mesh"
-    bezier_spline.bezier_points.add(len(anim_path["Control Points"])-1)         # Add points to the Spline to match the length of the control_points list
+    bezier_spline = bezier_curve_obj.splines.new('BEZIER')                          # Create new Bezier Spline "Mesh"
+    bezier_spline.bezier_points.add(len(anim_path["Control Points"])-1)             # Add points to the Spline to match the length of the control_points list
     for i, cp in enumerate(anim_path["Control Points"]):
-        bezier_spline.bezier_points[i].co = cp.location                         # Assign the poistion of the elements in control_list to the Bézier Points
-        #TODO: use the Handle data saved in the Control Point
-        bezier_spline.bezier_points[i].handle_left_type  = cp["Left Handle Type"]     # TODO: UPDATE COMMENT -> Make the Bézier Points handles AUTO so that the resulting spline is smooth by default. The user will be able to modify them from blender UI
-        bezier_spline.bezier_points[i].handle_left = cp["Left Handle"]
+        bezier_spline.bezier_points[i].co = cp.location                             # Assign the poistion of the elements in the list of Control Points to the Bézier Points
+        bezier_spline.bezier_points[i].handle_left_type  = cp["Left Handle Type"]   # Use the handle data from the list of Control Points for the Bézier Points,
+        bezier_spline.bezier_points[i].handle_left = mathutils.Vector(cp["Left Handle"].to_list()) + cp.location             #   originally the handle type is 'AUTO', but then any user-made change is saved and applied
         bezier_spline.bezier_points[i].handle_right_type = cp["Right Handle Type"]
-        bezier_spline.bezier_points[i].handle_right = cp["Right Handle"]
+        bezier_spline.bezier_points[i].handle_right = mathutils.Vector(cp["Right Handle"].to_list()) + cp.location
 
-    control_path = bpy.data.objects.new('Control Path', bezier_curve_obj)       # Create a new Control Path Object with the geometry data of the Bézier Curve
-    control_path.parent = anim_path                                             # Make the Control Path a child of the Animation preview Object
-    bpy.data.collections["Collection"].objects.link(control_path)               # Add the Control Path Object in the scene
+    control_path = bpy.data.objects.new('Control Path', bezier_curve_obj)           # Create a new Control Path Object with the geometry data of the Bézier Curve
+    control_path.parent = anim_path                                                 # Make the Control Path a child of the Animation preview Object
+    bpy.data.collections["Collection"].objects.link(control_path)                   # Add the Control Path Object in the scene
 
     for area in bpy.context.screen.areas:
         if area.type == 'PROPERTIES':
             area.tag_redraw()
-
-    #TODO: interpolate values on spline
 
 # Function for drawing number labels next to the control points
 def draw_pointer_numbers_callback(self, context):
