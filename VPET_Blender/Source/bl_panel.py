@@ -126,7 +126,7 @@ class VPET_PT_Control_Points_Panel(VPET_Panel, bpy.types.Panel):
             row = layout.row()
             row.label(text="To use the Control Point Property Panel")
             row = layout.row()
-            row.label(text="Disable Auto Update")
+            row.label(text="Enable Auto Update")
         elif AddPath.default_name in bpy.data.objects:
             # Getting Control Points Properties
             cp_props = bpy.context.scene.control_point_settings
