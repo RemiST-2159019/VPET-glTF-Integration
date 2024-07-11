@@ -59,14 +59,15 @@ from .bl_op import AddPointAfter
 from .bl_op import AddPointBefore
 from .bl_op import ControlPointProps
 from .bl_op import ControlPointSelect
-from .bl_op import EvalCurve
+from .bl_op import EditControlPointHandle
+from .bl_op import UpdateCurveViz
 from .bl_op import InteractionListener
-from .bl_op import ToggleAutoEval
+from .bl_op import ToggleAutoUpdate
 from .bl_op import SendRpcCall
 from .bl_panel import VPET_PT_Panel
 from .bl_panel import VPET_PT_Anim_Path_Panel
-from .bl_panel import VPET_PT_Anim_Path_Menu
 from .bl_panel import VPET_PT_Control_Points_Panel
+from .bl_panel import VPET_PT_Anim_Path_Menu
 from .tools import initialize
 from .settings import VpetData
 from .settings import VpetProperties
@@ -74,8 +75,8 @@ from .updateTRS import RealTimeUpdaterOperator
 from .singleSelect import OBJECT_OT_single_select
 
 # imported classes to register
-classes = (DoDistribute, StopDistribute, SetupScene, VPET_PT_Panel, VPET_PT_Anim_Path_Panel, VPET_PT_Anim_Path_Menu, VPET_PT_Control_Points_Panel, VpetProperties, InstallZMQ, RealTimeUpdaterOperator, OBJECT_OT_single_select,
-           SetupCharacter, MakeEditable, ParentToRoot, AddPath, AddPointAfter, AddPointBefore, ControlPointProps, ControlPointSelect, EvalCurve, ToggleAutoEval, InteractionListener, SendRpcCall) 
+classes = (DoDistribute, StopDistribute, SetupScene, VPET_PT_Panel, VPET_PT_Anim_Path_Panel, VPET_PT_Control_Points_Panel, VPET_PT_Anim_Path_Menu, VpetProperties, InstallZMQ, RealTimeUpdaterOperator, OBJECT_OT_single_select,
+           SetupCharacter, MakeEditable, ParentToRoot, AddPath, AddPointAfter, AddPointBefore, ControlPointProps, ControlPointSelect, EditControlPointHandle, UpdateCurveViz, ToggleAutoUpdate, InteractionListener, SendRpcCall) 
 
 def add_menu_path(self, context):
     print("Registering Add Path Menu Entry")
@@ -101,7 +102,7 @@ def register():
     bpy.types.VIEW3D_MT_mesh_add.append(add_menu_path)      # Adding a submenu with buttons to add a new Control Path and a new Control Point to the Add-Mesh Menu
     bpy.types.VIEW3D_MT_curve_add.append(add_menu_path)     # Adding a submenu with buttons to add a new Control Path and a new Control Point to the Add-Curve Menu
 
-    bpy.app.handlers.depsgraph_update_post.append(EvalCurve.on_delete_update_handler)   # Adding auto update handler for the animation path. Called any time the scene graph is updated
+    bpy.app.handlers.depsgraph_update_post.append(UpdateCurveViz.on_delete_update_handler)   # Adding auto update handler for the animation path. Called any time the scene graph is updated
     bpy.app.handlers.depsgraph_update_post.append(ControlPointProps.update_property_ui)   # Adding auto update handler for the collection of control point properties. Called any time the scene graph is updated
 
     print("Registered VPET Addon")
